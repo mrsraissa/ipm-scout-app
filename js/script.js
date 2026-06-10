@@ -61,16 +61,36 @@ function jsonp(action, params = {}) {
 }
 
 function postToGoogle(params) {
-  const formData = new FormData();
+  return new Promise((resolve) => {
+    const iframeName = "hidden_iframe_" + Date.now();
 
-  Object.keys(params).forEach(key => {
-    formData.append(key, params[key]);
-  });
+    const iframe = document.createElement("iframe");
+    iframe.name = iframeName;
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
 
-  return fetch(API_URL, {
-    method: "POST",
-    mode: "no-cors",
-    body: formData
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = API_URL;
+    form.target = iframeName;
+    form.style.display = "none";
+
+    Object.keys(params).forEach(key => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = params[key];
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+
+    setTimeout(() => {
+      form.remove();
+      iframe.remove();
+      resolve();
+    }, 1500);
   });
 }
 
