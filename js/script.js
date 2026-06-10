@@ -2,7 +2,11 @@ const API_URL =
 "https://script.google.com/macros/s/AKfycbwigtd8hNdT8xJ8Lc0P1iz5Y8dTnP6bKXGj1VViasoFLm7sf5MYhqrdOsIVvWyvgZfU/exec";
 
 let appData = {
-    user: { name: "Loading..." },
+    user: {
+        name:
+            localStorage.getItem("employeeName")
+            || "Scout"
+    },
     pests: ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"],
     lastRecords: {},
     emptyBays: [],
@@ -207,31 +211,43 @@ function showEntry(bay) {
 }
 
 async function saveCounts() {
-    const inputs = document.querySelectorAll("#entryContainer input");
 
-    const counts = Array.from(inputs).map(input => ({
-        pest: input.dataset.pest,
-        count: input.value
-    }));
+    const inputs =
+        document.querySelectorAll("#entryContainer input");
 
-    const entry = {
-        scout: appData.user.name,
-        section: selectedSection,
-        bay: selectedBay,
-        status: "Scouted",
-        counts: counts,
-        notes: document.getElementById("notes").value
-    };
+    const formData = new URLSearchParams();
 
-    document.getElementById("message").innerHTML = "Saving...";
+    formData.append("scout", appData.user.name);
+    formData.append("section", selectedSection);
+    formData.append("bay", selectedBay);
+    formData.append("status", "Scouted");
+    formData.append(
+        "notes",
+        document.getElementById("notes").value
+    );
 
-    const result = await jsonp("saveScoutingEntry", {
-        entry: JSON.stringify(entry)
+    inputs.forEach(input => {
+        formData.append(
+            input.dataset.pest,
+            input.value
+        );
     });
 
-    document.getElementById("message").innerHTML = result.message;
+    document.getElementById("message").innerHTML =
+        "Saving...";
 
-    appData.lastRecords[selectedSection + "|" + selectedBay] = "Scouted";
+    await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+            "Content-Type":
+                "application/x-www-form-urlencoded"
+        },
+        body: formData.toString()
+    });
+
+    document.getElementById("message").innerHTML =
+        "Saved";
 
     setTimeout(() => {
         showBays(selectedSection);
@@ -239,24 +255,33 @@ async function saveCounts() {
 }
 
 async function saveEmptyBay() {
-    const entry = {
-        scout: appData.user.name,
-        section: selectedSection,
-        bay: selectedBay,
-        status: "Empty",
-        counts: [],
-        notes: document.getElementById("notes").value || "No plants"
-    };
 
-    document.getElementById("message").innerHTML = "Saving empty bay...";
+    const formData = new URLSearchParams();
 
-    const result = await jsonp("saveScoutingEntry", {
-        entry: JSON.stringify(entry)
+    formData.append("scout", appData.user.name);
+    formData.append("section", selectedSection);
+    formData.append("bay", selectedBay);
+    formData.append("status", "Empty");
+    formData.append(
+        "notes",
+        document.getElementById("notes").value || "No plants"
+    );
+
+    document.getElementById("message").innerHTML =
+        "Saving...";
+
+    await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+            "Content-Type":
+                "application/x-www-form-urlencoded"
+        },
+        body: formData.toString()
     });
 
-    document.getElementById("message").innerHTML = result.message;
-
-    appData.lastRecords[selectedSection + "|" + selectedBay] = "Empty";
+    document.getElementById("message").innerHTML =
+        "Saved";
 
     setTimeout(() => {
         showBays(selectedSection);
