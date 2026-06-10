@@ -57,17 +57,6 @@ function jsonp(action, params = {}) {
   });
 }
 
-function saveToGoogle(entry) {
-  return fetch(API_URL, {
-    method: "POST",
-    mode: "no-cors",
-    body: JSON.stringify({
-      action: "saveScoutingEntry",
-      entry: entry
-    })
-  });
-}
-
 async function loadStatus() {
   try {
     const result = await jsonp("getStatus");
@@ -216,7 +205,13 @@ async function saveCounts() {
   document.getElementById("message").innerHTML = "Saving...";
 
   try {
-    await saveToGoogle(entry);
+    const result = await jsonp("saveScoutingEntry", {
+      entry: JSON.stringify(entry)
+    });
+
+    if (!result.success) {
+      throw new Error(result.message);
+    }
 
     weekStatus[key] = "Scouted";
 
@@ -227,7 +222,7 @@ async function saveCounts() {
 
     setTimeout(() => showBays(selectedSection), 500);
   } catch (err) {
-    document.getElementById("message").innerHTML = "Save failed";
+    document.getElementById("message").innerHTML = "Save failed: " + err.message;
   }
 }
 
@@ -246,7 +241,13 @@ async function saveEmptyBay() {
   document.getElementById("message").innerHTML = "Saving...";
 
   try {
-    await saveToGoogle(entry);
+    const result = await jsonp("saveScoutingEntry", {
+      entry: JSON.stringify(entry)
+    });
+
+    if (!result.success) {
+      throw new Error(result.message);
+    }
 
     weekStatus[key] = "Empty";
 
@@ -257,6 +258,6 @@ async function saveEmptyBay() {
 
     setTimeout(() => showBays(selectedSection), 500);
   } catch (err) {
-    document.getElementById("message").innerHTML = "Save failed";
+    document.getElementById("message").innerHTML = "Save failed: " + err.message;
   }
 }
