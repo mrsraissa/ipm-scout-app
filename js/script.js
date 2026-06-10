@@ -1,142 +1,262 @@
-const SS = SpreadsheetApp.getActiveSpreadsheet();
+const API_URL =
+"https://script.google.com/macros/s/AKfycbwigtd8hNdT8xJ8Lc0P1iz5Y8dTnP6bKXGj1VViasoFLm7sf5MYhqrdOsIVvWyvgZfU/exec";
 
-function doGet(e) {
-  const action = e.parameter.action;
-  const callback = e.parameter.callback;
+const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
 
-  let result = { success: false, message: "Invalid action" };
+const bayMap = {
+  "S1":["B1","B2","B3","B4","B5","B6"],
+  "S2":["B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
+  "S3":["B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
+  "S4":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
+  "S5":["B4","B5","B6","B7","B8","B9","B10"],
+  "S6":["B2","B3","B4","B5","B6","B7","B8","B9","B10"],
+  "S7":["B2","B3","B4","B5","B6","B7","B8","B9","B10"],
+  "S8":["B1","B2","B3","B4","B5","B6","B7","B8","B9"],
+  "S9":["B1","B2","B3","B4","B5"],
+  "9A":["B6","B7","B8","B9","B10","B11","B12"],
+  "9B":["B6","B7","B8","B9","B10","B11","B12"],
+  "10A":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"],
+  "10B":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"]
+};
 
+const sectionOrder = [
+  "S1","S2","S3","S4","S5",
+  "S6","S7","S8","S9","9A","9B","10A","10B"
+];
+
+let selectedSection = "";
+let selectedBay = "";
+let weekStatus = {};
+
+renderSections();
+loadStatus();
+
+function jsonp(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    const callbackName = "cb_" + Date.now();
+
+    window[callbackName] = function(data) {
+      resolve(data);
+      delete window[callbackName];
+      script.remove();
+    };
+
+    const query = new URLSearchParams();
+    query.append("action", action);
+    query.append("callback", callbackName);
+
+    Object.keys(params).forEach(key => {
+      query.append(key, params[key]);
+    });
+
+    const script = document.createElement("script");
+    script.src = API_URL + "?" + query.toString();
+    script.onerror = reject;
+
+    document.body.appendChild(script);
+  });
+}
+
+function saveToGoogle(entry) {
+  return fetch(API_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body: JSON.stringify({
+      action: "saveScoutingEntry",
+      entry: entry
+    })
+  });
+}
+
+async function loadStatus() {
   try {
-    if (action === "getStatus") {
-      result = getThisWeekStatus();
-    }
+    const result = await jsonp("getStatus");
 
-    if (action === "saveScoutingEntry") {
-      const entry = JSON.parse(e.parameter.entry);
-      result = saveScoutingEntry(entry);
+    if (result.success) {
+      weekStatus = result.records || {};
+      localStorage.setItem("ipmWeekStatus", JSON.stringify(weekStatus));
+      refreshCurrentScreen();
     }
   } catch (err) {
-    result = { success: false, message: err.message };
-  }
+    const saved = localStorage.getItem("ipmWeekStatus");
 
-  if (callback) {
-    return ContentService
-      .createTextOutput(callback + "(" + JSON.stringify(result) + ")")
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
+    if (saved) {
+      weekStatus = JSON.parse(saved);
+    }
 
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
+    refreshCurrentScreen();
+  }
 }
 
-function doPost(e) {
-  let result = { success: false, message: "Invalid request" };
+function refreshCurrentScreen() {
+  if (selectedSection && !selectedBay) {
+    showBays(selectedSection);
+  }
+}
+
+function renderSections() {
+  selectedSection = "";
+  selectedBay = "";
+
+  document.getElementById("userName").innerHTML = "Scout Entry";
+  document.getElementById("bayContainer").innerHTML = "";
+  document.getElementById("entryContainer").innerHTML = "";
+
+  let html = `
+    <h2>Select Section</h2>
+    <div class="grid section-grid">
+  `;
+
+  sectionOrder.forEach(section => {
+    html += `
+      <button class="btn" onclick="showBays('${section}')">
+        ${section}
+      </button>
+    `;
+  });
+
+  html += `</div>`;
+
+  document.getElementById("sectionContainer").innerHTML = html;
+}
+
+function showBays(section) {
+  selectedSection = section;
+  selectedBay = "";
+
+  document.getElementById("sectionContainer").innerHTML = "";
+  document.getElementById("entryContainer").innerHTML = "";
+
+  let html = `
+    <button class="back-btn" onclick="renderSections()">← Sections</button>
+    <h2>${section} - Select Bay</h2>
+    <div class="grid bay-grid">
+  `;
+
+  bayMap[section].forEach(bay => {
+    const status = getStatus(section, bay);
+
+    html += `
+      <button class="btn ${status}" onclick="showEntry('${bay}')">
+        ${bay}
+      </button>
+    `;
+  });
+
+  html += `</div>`;
+
+  document.getElementById("bayContainer").innerHTML = html;
+}
+
+function getStatus(section, bay) {
+  const key = section + "|" + bay;
+  const status = weekStatus[key] || localStorage.getItem("ipm_" + key);
+
+  if (status === "Scouted") return "scouted";
+  if (status === "Empty") return "empty";
+
+  return "not-scouted";
+}
+
+function showEntry(bay) {
+  selectedBay = bay;
+
+  document.getElementById("bayContainer").innerHTML = "";
+
+  let html = `
+    <button class="back-btn" onclick="showBays('${selectedSection}')">← Bays</button>
+    <h2>${selectedSection} - ${selectedBay}</h2>
+
+    <div class="compact-entry">
+  `;
+
+  pests.forEach(pest => {
+    html += `
+      <div class="entry-row">
+        <label>${pest}</label>
+        <input type="number" min="0" value="0" data-pest="${pest}">
+      </div>
+    `;
+  });
+
+  html += `
+    </div>
+
+    <label><strong>Notes</strong></label>
+    <textarea id="notes" placeholder="Crop, location, treatment, beneficials..."></textarea>
+
+    <button class="save-btn" onclick="saveCounts()">Save Counts</button>
+    <button class="empty-btn" onclick="saveEmptyBay()">Empty Bay / No Plants</button>
+
+    <div id="message" class="message"></div>
+  `;
+
+  document.getElementById("entryContainer").innerHTML = html;
+}
+
+async function saveCounts() {
+  const inputs = document.querySelectorAll("#entryContainer input");
+
+  const counts = Array.from(inputs).map(input => ({
+    pest: input.dataset.pest,
+    count: input.value
+  }));
+
+  const entry = {
+    scout: "Raissa",
+    section: selectedSection,
+    bay: selectedBay,
+    status: "Scouted",
+    counts: counts,
+    notes: document.getElementById("notes").value
+  };
+
+  const key = selectedSection + "|" + selectedBay;
+
+  document.getElementById("message").innerHTML = "Saving...";
 
   try {
-    const body = JSON.parse(e.postData.contents);
+    await saveToGoogle(entry);
 
-    if (body.action === "saveScoutingEntry") {
-      result = saveScoutingEntry(body.entry);
-    }
+    weekStatus[key] = "Scouted";
+
+    localStorage.setItem("ipm_" + key, "Scouted");
+    localStorage.setItem("ipmWeekStatus", JSON.stringify(weekStatus));
+
+    document.getElementById("message").innerHTML = "Saved";
+
+    setTimeout(() => showBays(selectedSection), 500);
   } catch (err) {
-    result = { success: false, message: err.message };
+    document.getElementById("message").innerHTML = "Save failed";
   }
-
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
 }
 
-function getWeekNumber(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-function saveScoutingEntry(entry) {
-  const sheet = SS.getSheetByName("Scout_Data");
-  const now = new Date();
-  const week = getWeekNumber(now);
-  const scout = entry.scout || "Raissa";
-
-  if (entry.status === "Empty") {
-    sheet.appendRow([
-      now,
-      week,
-      scout,
-      entry.section,
-      entry.bay,
-      "Empty",
-      "",
-      "",
-      entry.notes || "No plants"
-    ]);
-
-    return {
-      success: true,
-      message: "Empty bay saved",
-      week: week
-    };
-  }
-
-  entry.counts.forEach(item => {
-    sheet.appendRow([
-      now,
-      week,
-      scout,
-      entry.section,
-      entry.bay,
-      "Scouted",
-      item.pest,
-      Number(item.count || 0),
-      entry.notes || ""
-    ]);
-  });
-
-  return {
-    success: true,
-    message: "Counts saved",
-    week: week
+async function saveEmptyBay() {
+  const entry = {
+    scout: "Raissa",
+    section: selectedSection,
+    bay: selectedBay,
+    status: "Empty",
+    counts: [],
+    notes: document.getElementById("notes").value || "No plants"
   };
-}
 
-function getThisWeekStatus() {
-  const sheet = SS.getSheetByName("Scout_Data");
-  const data = sheet.getDataRange().getValues();
+  const key = selectedSection + "|" + selectedBay;
 
-  if (data.length < 2) {
-    return {
-      success: true,
-      records: {}
-    };
+  document.getElementById("message").innerHTML = "Saving...";
+
+  try {
+    await saveToGoogle(entry);
+
+    weekStatus[key] = "Empty";
+
+    localStorage.setItem("ipm_" + key, "Empty");
+    localStorage.setItem("ipmWeekStatus", JSON.stringify(weekStatus));
+
+    document.getElementById("message").innerHTML = "Empty bay saved";
+
+    setTimeout(() => showBays(selectedSection), 500);
+  } catch (err) {
+    document.getElementById("message").innerHTML = "Save failed";
   }
-
-  const headers = data.shift();
-  const weekNow = getWeekNumber(new Date());
-
-  const weekIndex = headers.indexOf("Week");
-  const sectionIndex = headers.indexOf("Section");
-  const bayIndex = headers.indexOf("Bay");
-  const statusIndex = headers.indexOf("Status");
-
-  const records = {};
-
-  data.forEach(row => {
-    if (row[weekIndex] == weekNow) {
-      const key = row[sectionIndex] + "|" + row[bayIndex];
-      records[key] = row[statusIndex];
-    }
-  });
-
-  return {
-    success: true,
-    week: weekNow,
-    records: records
-  };
 }
