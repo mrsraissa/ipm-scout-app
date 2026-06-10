@@ -222,10 +222,10 @@ async function saveCounts() {
       section: selectedSection,
       bay: selectedBay,
       status: "Scouted",
-      thrips: values["Thrips"] || ,
-      aphids: values["Aphids"] || ,
-      whiteflies: values["Whiteflies"] || ,
-      fungusGnats: values["Fungus Gnats"] || ,
+      thrips: values["Thrips"] || 0,
+      aphids: values["Aphids"] || 0,
+      whiteflies: values["Whiteflies"] || 0,
+      fungusGnats: values["Fungus Gnats"] || 0,
       notes: document.getElementById("notes").value
     });
 
@@ -275,10 +275,8 @@ async function saveEmptyBay() {
     document.getElementById("message").innerHTML = "Save failed";
   }
 }
-function testSave() {
-  const scriptURL =
-    "https://script.google.com/macros/s/AKfycbwigtd8hNdT8xJ8Lc0P1iz5Y8dTnP6bKXGj1VViasoFLm7sf5MYhqrdOsIVvWyvgZfU/exec";
 
+function testSave() {
   const formData = new URLSearchParams();
 
   formData.append("scout", "Raissa");
@@ -291,7 +289,7 @@ function testSave() {
   formData.append("fungusGnats", "2");
   formData.append("notes", "GitHub test save");
 
-  fetch(scriptURL, {
+  fetch(API_URL, {
     method: "POST",
     mode: "no-cors",
     headers: {
