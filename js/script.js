@@ -53,6 +53,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "User: " + appData.user.name;
 
     renderSections();
+
+setTimeout(() => {
+    loadGoogleData();
+}, 500);
 });
 
 function normalizeBayMap(rawMap) {
