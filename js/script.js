@@ -57,6 +57,27 @@ Object.keys(params).forEach(key => {
   });
 }
 
+function saveWithIframe(entry) {
+  return new Promise((resolve) => {
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+
+    const url =
+      API_URL +
+      "?action=saveScoutingEntry" +
+      "&entry=" +
+      encodeURIComponent(JSON.stringify(entry));
+
+    iframe.src = url;
+
+    document.body.appendChild(iframe);
+
+    setTimeout(() => {
+      iframe.remove();
+      resolve({ success: true, message: "Saved" });
+    }, 2500);
+  });
+}
 async function loadStatus() {
   try {
     const result = await jsonp("getStatus");
@@ -197,9 +218,8 @@ async function saveCounts() {
 
   document.getElementById("message").innerHTML = "Saving...";
 
-  const result = await jsonp("saveScoutingEntry", {
-    entry: JSON.stringify(entry)
-  });
+  const result = await saveWithIframe(entry);
+
 
   if (result.success) {
     const key = selectedSection + "|" + selectedBay;
@@ -227,9 +247,7 @@ async function saveEmptyBay() {
 
   document.getElementById("message").innerHTML = "Saving...";
 
-  const result = await jsonp("saveScoutingEntry", {
-    entry: JSON.stringify(entry)
-  });
+const result = await saveWithIframe(entry);
 
   if (result.success) {
     const key = selectedSection + "|" + selectedBay;
