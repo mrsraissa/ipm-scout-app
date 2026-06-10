@@ -275,3 +275,30 @@ async function saveEmptyBay() {
     document.getElementById("message").innerHTML = "Save failed";
   }
 }
+function testSave() {
+  const scriptURL =
+    "https://script.google.com/macros/s/AKfycbwigtd8hNdT8xJ8Lc0P1iz5Y8dTnP6bKXGj1VViasoFLm7sf5MYhqrdOsIVvWyvgZfU/exec";
+
+  const formData = new URLSearchParams();
+
+  formData.append("scout", "Raissa");
+  formData.append("section", "S1");
+  formData.append("bay", "B1");
+  formData.append("status", "Scouted");
+  formData.append("thrips", "7");
+  formData.append("aphids", "1");
+  formData.append("whiteflies", "0");
+  formData.append("fungusGnats", "2");
+  formData.append("notes", "GitHub test save");
+
+  fetch(scriptURL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: formData.toString()
+  });
+
+  alert("Test sent");
+}
