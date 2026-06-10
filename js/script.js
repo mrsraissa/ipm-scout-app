@@ -184,29 +184,31 @@ function showEntry(bay) {
 }
 
 async function saveCounts() {
+
   const inputs = document.querySelectorAll("#entryContainer input");
 
-  const counts = Array.from(inputs).map(input => ({
-    pest: input.dataset.pest,
-    count: input.value
-  }));
+  const values = {};
 
-  const entry = {
-    scout: "Raissa",
-    section: selectedSection,
-    bay: selectedBay,
-    status: "Scouted",
-    counts: counts,
-    notes: document.getElementById("notes").value
-  };
+  inputs.forEach(input => {
+    values[input.dataset.pest] = input.value;
+  });
 
   const key = selectedSection + "|" + selectedBay;
 
   document.getElementById("message").innerHTML = "Saving...";
 
   try {
-    const result = await jsonp("saveScoutingEntry", {
-      entry: JSON.stringify(entry)
+
+    const result = await jsonp("saveEntry", {
+      scout: "Raissa",
+      section: selectedSection,
+      bay: selectedBay,
+      status: "Scouted",
+      thrips: values["Thrips"] || 0,
+      aphids: values["Aphids"] || 0,
+      whiteflies: values["Whiteflies"] || 0,
+      fungusGnats: values["Fungus Gnats"] || 0,
+      notes: document.getElementById("notes").value
     });
 
     if (!result.success) {
@@ -220,29 +222,31 @@ async function saveCounts() {
 
     document.getElementById("message").innerHTML = "Saved";
 
-    setTimeout(() => showBays(selectedSection), 500);
-  } catch (err) {
-    document.getElementById("message").innerHTML = "Save failed: " + err.message;
+    setTimeout(() => {
+      showBays(selectedSection);
+    }, 500);
+
+  } catch(err) {
+
+    document.getElementById("message").innerHTML =
+      "Save failed: " + err.message;
   }
 }
 
 async function saveEmptyBay() {
-  const entry = {
-    scout: "Raissa",
-    section: selectedSection,
-    bay: selectedBay,
-    status: "Empty",
-    counts: [],
-    notes: document.getElementById("notes").value || "No plants"
-  };
 
   const key = selectedSection + "|" + selectedBay;
 
   document.getElementById("message").innerHTML = "Saving...";
 
   try {
-    const result = await jsonp("saveScoutingEntry", {
-      entry: JSON.stringify(entry)
+
+    const result = await jsonp("saveEntry", {
+      scout: "Raissa",
+      section: selectedSection,
+      bay: selectedBay,
+      status: "Empty",
+      notes: document.getElementById("notes").value || "No plants"
     });
 
     if (!result.success) {
@@ -254,10 +258,16 @@ async function saveEmptyBay() {
     localStorage.setItem("ipm_" + key, "Empty");
     localStorage.setItem("ipmWeekStatus", JSON.stringify(weekStatus));
 
-    document.getElementById("message").innerHTML = "Empty bay saved";
+    document.getElementById("message").innerHTML =
+      "Empty bay saved";
 
-    setTimeout(() => showBays(selectedSection), 500);
-  } catch (err) {
-    document.getElementById("message").innerHTML = "Save failed: " + err.message;
+    setTimeout(() => {
+      showBays(selectedSection);
+    }, 500);
+
+  } catch(err) {
+
+    document.getElementById("message").innerHTML =
+      "Save failed: " + err.message;
   }
 }
