@@ -1,21 +1,36 @@
 const API_URL =
 "https://script.google.com/macros/s/AKfycbwigtd8hNdT8xJ8Lc0P1iz5Y8dTnP6bKXGj1VViasoFLm7sf5MYhqrdOsIVvWyvgZfU/exec";
+
 let appData = {};
 
 loadData();
 
-async function loadData(){
+function loadData() {
 
-    const response = await fetch(
-        API_URL + "?action=getAppData"
-    );
+    const callbackName = "jsonpCallback_" + Date.now();
 
-    appData = await response.json();
+    window[callbackName] = function(data) {
 
-    render();
+        appData = data;
+
+        render();
+
+        delete window[callbackName];
+        script.remove();
+    };
+
+    const script = document.createElement("script");
+
+    script.src =
+        API_URL +
+        "?action=getAppData" +
+        "&callback=" +
+        callbackName;
+
+    document.body.appendChild(script);
 }
 
-function render(){
+function render() {
 
     document.getElementById("userName").innerHTML =
         "User: " + appData.user.name;
@@ -23,7 +38,7 @@ function render(){
     renderSections();
 }
 
-function renderSections(){
+function renderSections() {
 
     const container =
         document.getElementById("sectionContainer");
@@ -37,21 +52,21 @@ function renderSections(){
         .sort()
         .forEach(section => {
 
-        html += `
-            <button
-                class="btn"
-                onclick="showBays('${section}')">
-                ${section}
-            </button>
-        `;
-    });
+            html += `
+                <button
+                    class="btn"
+                    onclick="showBays('${section}')">
+                    ${section}
+                </button>
+            `;
+        });
 
     html += "</div>";
 
     container.innerHTML = html;
 }
 
-function showBays(section){
+function showBays(section) {
 
     const container =
         document.getElementById("bayContainer");
