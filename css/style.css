@@ -214,3 +214,42 @@ textarea{
         font-size:28px;
     }
 }
+@media(max-width:800px){
+
+  .grid{
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px;
+  }
+
+  .btn{
+    padding:12px 8px;
+    font-size:22px;
+    min-height:64px;
+  }
+
+  .entry-row{
+    padding:8px 12px;
+    margin-bottom:7px;
+    min-height:54px;
+  }
+
+  .entry-row label{
+    font-size:21px;
+  }
+
+  .entry-row input{
+    width:85px;
+    font-size:26px;
+    padding:3px;
+  }
+
+  textarea{
+    min-height:55px;
+  }
+
+  .save-btn,
+  .empty-btn{
+    padding:12px;
+    font-size:22px;
+  }
+}
