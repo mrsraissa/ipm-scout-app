@@ -61,36 +61,19 @@ function jsonp(action, params = {}) {
 }
 
 function postToGoogle(params) {
-  return new Promise((resolve) => {
-    const iframeName = "hidden_iframe_" + Date.now();
+  const formData = new URLSearchParams();
 
-    const iframe = document.createElement("iframe");
-    iframe.name = iframeName;
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
+  Object.keys(params).forEach(key => {
+    formData.append(key, params[key]);
+  });
 
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = API_URL;
-    form.target = iframeName;
-    form.style.display = "none";
-
-    Object.keys(params).forEach(key => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = key;
-      input.value = params[key];
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-
-    setTimeout(() => {
-      form.remove();
-      iframe.remove();
-      resolve();
-    }, 1500);
+  return fetch(API_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: formData.toString()
   });
 }
 
@@ -239,10 +222,10 @@ async function saveCounts() {
       section: selectedSection,
       bay: selectedBay,
       status: "Scouted",
-      thrips: values["Thrips"] || 0,
-      aphids: values["Aphids"] || 0,
-      whiteflies: values["Whiteflies"] || 0,
-      fungusGnats: values["Fungus Gnats"] || 0,
+      thrips: values["Thrips"] || ,
+      aphids: values["Aphids"] || ,
+      whiteflies: values["Whiteflies"] || ,
+      fungusGnats: values["Fungus Gnats"] || ,
       notes: document.getElementById("notes").value
     });
 
