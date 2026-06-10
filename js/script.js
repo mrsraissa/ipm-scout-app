@@ -30,7 +30,7 @@ let selectedBay = "";
 let weekStatus = {};
 
 renderSections();
-loadStatus();
+// loadStatus disabled for now. We will add bay colors later.
 
 function jsonp(action, params = {}) {
   return new Promise((resolve, reject) => {
