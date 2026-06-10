@@ -1,24 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SCG IPM Scout</title>
-    <link rel="stylesheet" href="css/style.css">
+
+    <link rel="stylesheet" href="css/style.css?v=5">
 </head>
+
 <body>
 
-<div class="container">
+<div class="layout">
 
-    <h1>SCG IPM Scout</h1>
+    <aside class="sidebar">
 
-    <div id="userName"></div>
+        <h2>SCG IPM</h2>
 
-    <div id="sectionContainer"></div>
+        <a href="#" class="nav-link active">
+            Scout Entry
+        </a>
 
-    <div id="bayContainer"></div>
+        <a href="#" class="nav-link">
+            Dashboard
+        </a>
+
+        <a href="#" class="nav-link">
+            Heat Maps
+        </a>
+
+        <a href="#" class="nav-link">
+            Reports
+        </a>
+
+    </aside>
+
+    <main class="container">
+
+        <h1>SCG IPM Scout</h1>
+
+        <div id="userName" class="user-box">
+            Loading...
+        </div>
+
+        <div class="card">
+
+            <div id="sectionContainer"></div>
+
+            <div id="bayContainer"></div>
+
+            <div id="entryContainer"></div>
+
+        </div>
+
+    </main>
 
 </div>
 
-<script src="js/script.js?v=4"></script>
+<script src="js/script.js?v=5"></script>
 
 </body>
 </html>
