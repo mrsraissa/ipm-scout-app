@@ -51,7 +51,9 @@ function jsonp(action, params = {}) {
 
     const script = document.createElement("script");
     script.src = API_URL + "?" + query.toString();
-    script.onerror = reject;
+   script.onerror = function() {
+  reject(new Error("Apps Script connection failed"));
+};
 
     document.body.appendChild(script);
   });
