@@ -51,11 +51,26 @@ function jsonp(action, params = {}) {
 
     const script = document.createElement("script");
     script.src = API_URL + "?" + query.toString();
-   script.onerror = function() {
-  reject(new Error("Apps Script connection failed"));
-};
+
+    script.onerror = function() {
+      reject(new Error("Apps Script connection failed"));
+    };
 
     document.body.appendChild(script);
+  });
+}
+
+function postToGoogle(params) {
+  const formData = new FormData();
+
+  Object.keys(params).forEach(key => {
+    formData.append(key, params[key]);
+  });
+
+  return fetch(API_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body: formData
   });
 }
 
@@ -186,7 +201,6 @@ function showEntry(bay) {
 }
 
 async function saveCounts() {
-
   const inputs = document.querySelectorAll("#entryContainer input");
 
   const values = {};
@@ -200,8 +214,7 @@ async function saveCounts() {
   document.getElementById("message").innerHTML = "Saving...";
 
   try {
-
-    const result = await jsonp("saveEntry", {
+    await postToGoogle({
       scout: "Raissa",
       section: selectedSection,
       bay: selectedBay,
@@ -212,10 +225,6 @@ async function saveCounts() {
       fungusGnats: values["Fungus Gnats"] || 0,
       notes: document.getElementById("notes").value
     });
-
-    if (!result.success) {
-      throw new Error(result.message);
-    }
 
     weekStatus[key] = "Scouted";
 
@@ -229,31 +238,23 @@ async function saveCounts() {
     }, 500);
 
   } catch(err) {
-
-    document.getElementById("message").innerHTML =
-      "Save failed: " + err.message;
+    document.getElementById("message").innerHTML = "Save failed";
   }
 }
 
 async function saveEmptyBay() {
-
   const key = selectedSection + "|" + selectedBay;
 
   document.getElementById("message").innerHTML = "Saving...";
 
   try {
-
-    const result = await jsonp("saveEntry", {
+    await postToGoogle({
       scout: "Raissa",
       section: selectedSection,
       bay: selectedBay,
       status: "Empty",
       notes: document.getElementById("notes").value || "No plants"
     });
-
-    if (!result.success) {
-      throw new Error(result.message);
-    }
 
     weekStatus[key] = "Empty";
 
@@ -268,8 +269,6 @@ async function saveEmptyBay() {
     }, 500);
 
   } catch(err) {
-
-    document.getElementById("message").innerHTML =
-      "Save failed: " + err.message;
+    document.getElementById("message").innerHTML = "Save failed";
   }
 }
