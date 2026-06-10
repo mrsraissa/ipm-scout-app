@@ -1,5 +1,6 @@
 const API_URL =
-"https://script.google.com/macros/s/AKfycbwigtd8hNdT8xJ8Lc0P1iz5Y8dTnP6bKXGj1VViasoFLm7sf5MYhqrdOsIVvWyvgZfU/exec";
+const API_URL =
+"https://script.google.com/macros/s/AKfycbwdJdfkIzl3ndZZe7go7IB8EONnlMWcPaHKhfXGUoRco1ShtQ6fcmbyJYDH38Ee7ccy/exec";
 
 const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
 
