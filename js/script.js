@@ -41,11 +41,13 @@ function jsonp(action, params = {}) {
       script.remove();
     };
 
-    const query = new URLSearchParams({
-      action: action,
-      callback: callbackName,
-      ...params
-    });
+    const query = new URLSearchParams();
+query.append("action", action);
+query.append("callback", callbackName);
+
+Object.keys(params).forEach(key => {
+  query.append(key, params[key]);
+});
 
     const script = document.createElement("script");
     script.src = API_URL + "?" + query.toString();
