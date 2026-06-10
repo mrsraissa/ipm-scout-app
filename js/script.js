@@ -217,18 +217,31 @@ async function saveCounts() {
 
   document.getElementById("message").innerHTML = "Saving...";
 
-  try {
-    await postToGoogle({
-      scout: "Raissa",
-      section: selectedSection,
-      bay: selectedBay,
-      status: "Scouted",
-      thrips: values["Thrips"] || 0,
-      aphids: values["Aphids"] || 0,
-      whiteflies: values["Whiteflies"] || 0,
-      fungusGnats: values["Fungus Gnats"] || 0,
-      notes: document.getElementById("notes").value
-    });
+try {
+
+  console.log({
+    scout: "Raissa",
+    section: selectedSection,
+    bay: selectedBay,
+    status: "Scouted",
+    thrips: values["Thrips"] || 0,
+    aphids: values["Aphids"] || 0,
+    whiteflies: values["Whiteflies"] || 0,
+    fungusGnats: values["Fungus Gnats"] || 0,
+    notes: document.getElementById("notes").value
+  });
+
+  await postToGoogle({
+    scout: "Raissa",
+    section: selectedSection,
+    bay: selectedBay,
+    status: "Scouted",
+    thrips: values["Thrips"] || 0,
+    aphids: values["Aphids"] || 0,
+    whiteflies: values["Whiteflies"] || 0,
+    fungusGnats: values["Fungus Gnats"] || 0,
+    notes: document.getElementById("notes").value
+  });
 
     weekStatus[key] = "Scouted";
 
