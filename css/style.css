@@ -307,7 +307,13 @@ textarea{
 .hotspot-card span{
   color:#16a34a;
 }
-
+.pest-legend{
+  text-align:center;
+  font-size:12px;
+  color:#64748b;
+  margin-bottom:10px;
+  font-weight:600;
+}
 
 
 
