@@ -27,6 +27,7 @@
   <main class="container">
     <h1>SCG IPM Scout</h1>
     <div id="weekDisplay">Loading week...</div>
+    <div id="currentScout"></div>
     
 
     <div class="card">
@@ -72,8 +73,15 @@ let selectedSection = "";
 let selectedBay = "";
 let weekStatus = {};
 let currentWeek = "";
+  let currentScout =
+  localStorage.getItem("currentScout") || "";
 
-renderSections();
+if (currentScout) {
+  renderSections();
+} else {
+  selectScout();
+}
+
 loadStatus();
 
 function loadStatus() {
@@ -85,6 +93,10 @@ function loadStatus() {
       currentWeek = data.week || "";
       document.getElementById("weekDisplay").innerHTML =
         currentWeek ? "Week " + currentWeek : "";
+      if (currentScout) {
+  document.getElementById("currentScout").innerHTML =
+    "Scout: " + currentScout;
+}
       renderSections();
     }
 
@@ -111,7 +123,36 @@ function updateBottomBar(screen) {
   sectionsBtn.style.display = screen === "bays" ? "block" : "none";
   baysBtn.style.display = screen === "entry" ? "block" : "none";
 }
+function selectScout() {
 
+  let html = `
+    <h2>Select Scout</h2>
+
+    <div class="grid">
+      <button class="btn" onclick="setScout('Raissa')">Raissa</button>
+      <button class="btn" onclick="setScout('Mary')">Mary</button>
+      <button class="btn" onclick="setScout('Brandon')">Brandon</button>
+      <button class="btn" onclick="setScout('Larry')">Larry</button>
+    </div>
+  `;
+
+  document.getElementById("sectionContainer").innerHTML = html;
+}
+
+function setScout(name) {
+
+  currentScout = name;
+
+  localStorage.setItem(
+    "currentScout",
+    name
+  );
+
+  document.getElementById("currentScout").innerHTML =
+    "Scout: " + name;
+
+  renderSections();
+}
 
   
 function renderSections() {
@@ -302,7 +343,7 @@ async function saveCounts() {
   document.getElementById("message").innerHTML = "Saving...";
 
   await sendToSheet({
-    scout: "Raissa",
+    scout: currentScout,
     section: selectedSection,
     bay: selectedBay,
     status: "Scouted",
@@ -323,7 +364,7 @@ async function saveEmptyBay() {
   document.getElementById("message").innerHTML = "Saving...";
 
   await sendToSheet({
-    scout: "Raissa",
+    scout: currentScout,
     section: selectedSection,
     bay: selectedBay,
     status: "Empty",
