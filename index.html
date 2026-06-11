@@ -117,6 +117,7 @@ function renderDashboard(data) {
   const hotspots = data.hotspots;
 
  let html = `
+let html = `
   <h2>Dashboard</h2>
 
   <div class="dashboard-card">
@@ -128,6 +129,9 @@ function renderDashboard(data) {
   </div>
 
   <div class="dashboard-card">
+    <h3>Section Completion</h3>
+`;
+
 Object.keys(sectionData).forEach(section => {
   html += `
     <div class="section-row">
@@ -139,6 +143,9 @@ Object.keys(sectionData).forEach(section => {
     </div>
   `;
 });
+
+html += `
+  </div>
 
   <div class="dashboard-card">
     <h3>Hotspots</h3>
