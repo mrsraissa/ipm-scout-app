@@ -506,7 +506,33 @@ textarea{
   padding:14px;
   min-width:260px;
 }
+.hotspot-wrap{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:6px !important;
+}
 
+.hotspot-cell{
+  width:72px !important;
+  height:58px !important;
+  min-width:72px !important;
+  border-radius:8px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+  align-items:center !important;
+  font-weight:800 !important;
+}
+
+.hotspot-cell strong{
+  font-size:17px !important;
+}
+
+.hotspot-cell span{
+  font-size:11px !important;
+  margin-top:4px !important;
+  white-space:nowrap !important;
+}
 /* Mobile */
 @media(max-width:800px){
 
