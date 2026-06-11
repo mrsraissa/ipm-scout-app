@@ -1,62 +1,188 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCG IPM Scout</title>
-
-    <link rel="stylesheet" href="css/style.css?v=5">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCG IPM Scout</title>
+  <link rel="stylesheet" href="css/style.css?v=100">
 </head>
 
 <body>
-<button onclick="testSave()">TEST SAVE TO SHEET</button>
+
 <div class="layout">
+  <aside class="sidebar">
+    <h2>SCG IPM</h2>
+    <a class="nav-link active">Scout Entry</a>
+    <a class="nav-link">Dashboard</a>
+    <a class="nav-link">Heat Maps</a>
+    <a class="nav-link">Reports</a>
+  </aside>
 
-    <aside class="sidebar">
+  <main class="container">
+    <h1>SCG IPM Scout</h1>
+    <div id="userName" class="user-box">Scout Entry</div>
 
-        <h2>SCG IPM</h2>
-
-        <a href="#" class="nav-link active">
-            Scout Entry
-        </a>
-
-        <a href="#" class="nav-link">
-            Dashboard
-        </a>
-
-        <a href="#" class="nav-link">
-            Heat Maps
-        </a>
-
-        <a href="#" class="nav-link">
-            Reports
-        </a>
-
-    </aside>
-
-    <main class="container">
-
-        <h1>SCG IPM Scout</h1>
-
-        <div id="userName" class="user-box">
-            Loading...
-        </div>
-
-        <div class="card">
-
-            <div id="sectionContainer"></div>
-
-            <div id="bayContainer"></div>
-
-            <div id="entryContainer"></div>
-
-        </div>
-
-    </main>
-
+    <div class="card">
+      <div id="sectionContainer"></div>
+      <div id="bayContainer"></div>
+      <div id="entryContainer"></div>
+    </div>
+  </main>
 </div>
 
-<script src="js/script.js?v=38"></script>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwdJdfkIzl3ndZZe7go7IB8EONnlMWcPaHKhfXGUoRco1ShtQ6fcmbyJYDH38Ee7ccy/exec";
+
+const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
+
+const bayMap = {
+  "S1":["B1","B2","B3","B4","B5","B6"],
+  "S2":["B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
+  "S3":["B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
+  "S4":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
+  "S5":["B4","B5","B6","B7","B8","B9","B10"],
+  "S6":["B2","B3","B4","B5","B6","B7","B8","B9","B10"],
+  "S7":["B2","B3","B4","B5","B6","B7","B8","B9","B10"],
+  "S8":["B1","B2","B3","B4","B5","B6","B7","B8","B9"],
+  "S9":["B1","B2","B3","B4","B5"],
+  "9A":["B6","B7","B8","B9","B10","B11","B12"],
+  "9B":["B6","B7","B8","B9","B10","B11","B12"],
+  "10A":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"],
+  "10B":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"]
+};
+
+const sectionOrder = ["S1","S2","S3","S4","S5","S6","S7","S8","S9","9A","9B","10A","10B"];
+
+let selectedSection = "";
+let selectedBay = "";
+
+renderSections();
+
+function renderSections() {
+  selectedSection = "";
+  selectedBay = "";
+
+  document.getElementById("bayContainer").innerHTML = "";
+  document.getElementById("entryContainer").innerHTML = "";
+
+  let html = `<h2>Select Section</h2><div class="grid section-grid">`;
+
+  sectionOrder.forEach(section => {
+    html += `<button class="btn" onclick="showBays('${section}')">${section}</button>`;
+  });
+
+  html += `</div>`;
+  document.getElementById("sectionContainer").innerHTML = html;
+}
+
+function showBays(section) {
+  selectedSection = section;
+  selectedBay = "";
+
+  document.getElementById("sectionContainer").innerHTML = "";
+  document.getElementById("entryContainer").innerHTML = "";
+
+  let html = `
+    <button class="back-btn" onclick="renderSections()">← Sections</button>
+    <h2>${section} - Select Bay</h2>
+    <div class="grid bay-grid">
+  `;
+
+  bayMap[section].forEach(bay => {
+    html += `<button class="btn not-scouted" onclick="showEntry('${bay}')">${bay}</button>`;
+  });
+
+  html += `</div>`;
+  document.getElementById("bayContainer").innerHTML = html;
+}
+
+function showEntry(bay) {
+  selectedBay = bay;
+  document.getElementById("bayContainer").innerHTML = "";
+
+  let html = `
+    <button class="back-btn" onclick="showBays('${selectedSection}')">← Bays</button>
+    <h2>${selectedSection} - ${selectedBay}</h2>
+  `;
+
+  pests.forEach(pest => {
+    html += `
+      <div class="entry-row">
+        <label>${pest}</label>
+        <input type="number" min="0" value="0" data-pest="${pest}">
+      </div>
+    `;
+  });
+
+  html += `
+    <label><strong>Notes</strong></label>
+    <textarea id="notes" placeholder="Crop, location, treatment, beneficials..."></textarea>
+
+    <button class="save-btn" onclick="saveCounts()">Save Counts</button>
+    <button class="empty-btn" onclick="saveEmptyBay()">Empty Bay / No Plants</button>
+
+    <div id="message" class="message"></div>
+  `;
+
+  document.getElementById("entryContainer").innerHTML = html;
+}
+
+function sendToSheet(params) {
+  const formData = new URLSearchParams();
+
+  Object.keys(params).forEach(key => {
+    formData.append(key, params[key]);
+  });
+
+  return fetch(API_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: formData.toString()
+  });
+}
+
+async function saveCounts() {
+  const values = {};
+  document.querySelectorAll("#entryContainer input").forEach(input => {
+    values[input.dataset.pest] = input.value;
+  });
+
+  document.getElementById("message").innerHTML = "Saving...";
+
+  await sendToSheet({
+    scout: "Raissa",
+    section: selectedSection,
+    bay: selectedBay,
+    status: "Scouted",
+    thrips: values["Thrips"] || 0,
+    aphids: values["Aphids"] || 0,
+    whiteflies: values["Whiteflies"] || 0,
+    fungusGnats: values["Fungus Gnats"] || 0,
+    notes: document.getElementById("notes").value
+  });
+
+  document.getElementById("message").innerHTML = "Saved";
+  setTimeout(() => showBays(selectedSection), 600);
+}
+
+async function saveEmptyBay() {
+  document.getElementById("message").innerHTML = "Saving...";
+
+  await sendToSheet({
+    scout: "Raissa",
+    section: selectedSection,
+    bay: selectedBay,
+    status: "Empty",
+    notes: document.getElementById("notes").value || "No plants"
+  });
+
+  document.getElementById("message").innerHTML = "Empty bay saved";
+  setTimeout(() => showBays(selectedSection), 600);
+}
+</script>
 
 </body>
 </html>
