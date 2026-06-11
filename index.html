@@ -155,7 +155,7 @@ function showBays(section) {
 
   bayMap[section].forEach(bay => {
     const statusClass = getBayStatus(section, bay);
-    html += `<button class="btn ${statusClass}" onclick="showEntry('${bay}')">${bay}</button>`;
+    html += `<button class="btn ${statusClass}" onclick="handleBayClick('${bay}')">${bay}</button>`;
   });
 
   html += `</div>`;
@@ -186,7 +186,22 @@ function getBayStatus(section, bay) {
 
   return "not-scouted";
 }
+function handleBayClick(bay) {
+  const key = selectedSection + "|" + bay;
+  const status = weekStatus[key];
 
+  if (status === "Scouted" || status === "Empty") {
+    const answer = confirm(
+      "This bay was already entered this week.\n\nDo you want to modify it?"
+    );
+
+    if (!answer) {
+      return;
+    }
+  }
+
+  showEntry(bay);
+}
 function showEntry(bay) {
   selectedBay = bay;
 
