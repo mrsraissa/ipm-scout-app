@@ -177,14 +177,19 @@ function renderDashboard(data) {
     `;
   });
 
-  html += `
+html += `
       </table>
+
+      <div class="pest-legend">
+        TR = Thrips | AP = Aphids | WF = Whiteflies | FG = Fungus Gnats
+      </div>
+
     </div>
 
     <div class="dashboard-card">
       <h3>Hotspots</h3>
       <div class="hotspot-grid">
-  `;
+`;
 
   Object.keys(hotspots).forEach(pest => {
     const shortName = {
