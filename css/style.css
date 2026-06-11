@@ -251,4 +251,41 @@ textarea{
     padding:12px;
     font-size:22px;
   }
+.section-grid .btn:last-child{
+  grid-column: 2;
 }
+@media(max-width:800px){
+
+  .entry-row{
+    padding:8px 12px;
+    margin-bottom:8px;
+    min-height:48px;
+  }
+
+  .entry-row label{
+    font-size:24px;
+  }
+
+  .entry-row input{
+    width:90px;
+    font-size:26px;
+    padding:3px;
+  }
+
+  textarea{
+    min-height:58px;
+    font-size:20px;
+  }
+
+  .save-btn,
+  .empty-btn{
+    padding:14px;
+    font-size:24px;
+  }
+
+  #entryContainer h2{
+    font-size:36px;
+    margin:16px 0;
+  }
+}    
+
