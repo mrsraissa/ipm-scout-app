@@ -219,6 +219,99 @@ textarea{
 .page h2{
   text-align:center;
 }
+.dashboard-card{
+  background:#f8fafc;
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:14px;
+}
+
+.dashboard-title{
+  text-align:center;
+  font-size:18px;
+  font-weight:800;
+  color:#064e3b;
+}
+
+.dashboard-percent{
+  text-align:center;
+  font-size:26px;
+  font-weight:800;
+  color:#16a34a;
+  margin:8px 0;
+}
+
+.progress-bar,
+.small-progress{
+  background:#cbd5e1;
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.progress-bar{
+  height:16px;
+}
+
+.progress-fill,
+.small-fill{
+  height:100%;
+  background:#16a34a;
+}
+
+.section-row{
+  display:grid;
+  grid-template-columns:40px 1fr 45px;
+  align-items:center;
+  gap:8px;
+  margin:8px 0;
+  font-weight:700;
+}
+
+.small-progress{
+  height:10px;
+}
+
+.pest-table{
+  width:100%;
+  border-collapse:collapse;
+  text-align:center;
+  font-weight:700;
+}
+
+.pest-table th,
+.pest-table td{
+  padding:8px 4px;
+  border-bottom:1px solid #e2e8f0;
+}
+
+.hotspot-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+
+.hotspot-card{
+  background:white;
+  border-radius:14px;
+  padding:12px;
+  text-align:center;
+  font-weight:700;
+}
+
+.hotspot-card strong{
+  display:block;
+  font-size:24px;
+  color:#065f46;
+}
+
+.hotspot-card span{
+  color:#16a34a;
+}
+
+
+
+
+
 /* Mobile */
 @media(max-width:800px){
 
