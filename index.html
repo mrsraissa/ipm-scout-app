@@ -92,6 +92,125 @@ let weekStatus = {};
 let currentWeek = "";
   let currentScout =
   localStorage.getItem("currentScout") || "";
+
+  function loadDashboard() {
+  const callbackName = "dashboardCallback_" + Date.now();
+
+  window[callbackName] = function(data) {
+    renderDashboard(data);
+
+    delete window[callbackName];
+    script.remove();
+  };
+
+  const script = document.createElement("script");
+  script.src = API_URL + "?action=getDashboard&callback=" + callbackName;
+  document.body.appendChild(script);
+}
+
+function renderDashboard(data) {
+  if (!data || !data.success) {
+    document.getElementById("dashboardPage").innerHTML =
+      "<h2>Dashboard</h2><p>Could not load dashboard data.</p>";
+    return;
+  }
+
+  const sectionData = data.sectionData;
+  const hotspots = data.hotspots;
+
+  let html = `
+    <h2>Dashboard</h2>
+
+    <div class="dashboard-card">
+      <div class="dashboard-title">Week ${data.week}</div>
+      <div class="dashboard-percent">${data.progress}% Complete</div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${data.progress}%"></div>
+      </div>
+    </div>
+
+    <div class="dashboard-card">
+      <h3>Section Completion</h3>
+  `;
+
+  Object.keys(sectionData).forEach(section => {
+    html += `
+      <div class="section-row">
+        <span>${section}</span>
+        <div class="small-progress">
+          <div class="small-fill" style="width:${sectionData[section].progress}%"></div>
+        </div>
+        <strong>${sectionData[section].progress}%</strong>
+      </div>
+    `;
+  });
+
+  html += `
+    </div>
+
+    <div class="dashboard-card">
+      <h3>Pest Counts by Section</h3>
+      <table class="pest-table">
+        <tr>
+          <th>Sec</th>
+          <th>TR</th>
+          <th>AP</th>
+          <th>WF</th>
+          <th>FG</th>
+        </tr>
+  `;
+
+  Object.keys(sectionData).forEach(section => {
+    const p = sectionData[section].pests;
+
+    html += `
+      <tr>
+        <td>${section}</td>
+        <td>${p["Thrips"]}</td>
+        <td>${p["Aphids"]}</td>
+        <td>${p["Whiteflies"]}</td>
+        <td>${p["Fungus Gnats"]}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+      </table>
+    </div>
+
+    <div class="dashboard-card">
+      <h3>Hotspots</h3>
+      <div class="hotspot-grid">
+  `;
+
+  Object.keys(hotspots).forEach(pest => {
+    const shortName = {
+      "Thrips": "TR",
+      "Aphids": "AP",
+      "Whiteflies": "WF",
+      "Fungus Gnats": "FG"
+    }[pest];
+
+    html += `
+      <div class="hotspot-card">
+        <div>${shortName}</div>
+        <strong>${hotspots[pest].section}</strong>
+        <span>${hotspots[pest].value}</span>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  document.getElementById("dashboardPage").innerHTML = html;
+}
+
+
+  
+  
 function showPage(page) {
   document.getElementById("scoutPage").style.display = "none";
   document.getElementById("dashboardPage").style.display = "none";
@@ -109,10 +228,11 @@ function showPage(page) {
   }
 
   if (page === "dashboard") {
-    document.getElementById("dashboardPage").style.display = "block";
-    document.querySelectorAll(".nav-link")[1].classList.add("active");
-    updateBottomBar("sections");
-  }
+  document.getElementById("dashboardPage").style.display = "block";
+  document.querySelectorAll(".nav-link")[1].classList.add("active");
+  updateBottomBar("sections");
+  loadDashboard();
+}
 
   if (page === "heatmaps") {
     document.getElementById("heatmapsPage").style.display = "block";
