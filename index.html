@@ -189,7 +189,7 @@ function showBays(section) {
   selectedBay = "";
 
   updateBottomBar("bays");
-  document.getElementById("currentScout").style.display = "none";
+  document.getElementById("currentScout").style.display = "block";
 
   document.getElementById("sectionContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
@@ -282,7 +282,7 @@ function showEntry(bay, entryData = null) {
   selectedBay = bay;
 
   updateBottomBar("entry");
-  document.getElementById("currentScout").style.display = "none";
+  document.getElementById("currentScout").style.display = "block";
 
   document.getElementById("bayContainer").innerHTML = "";
 
@@ -308,6 +308,9 @@ function showEntry(bay, entryData = null) {
   const lastUpdated = entryData && entryData.lastUpdated
     ? new Date(entryData.lastUpdated).toLocaleString()
     : "";
+  const lastScout = entryData && entryData.lastScout
+  ? entryData.lastScout
+  : "";
 
   html += `
     <label><strong>Notes</strong></label>
@@ -316,7 +319,7 @@ function showEntry(bay, entryData = null) {
     <button class="save-btn" onclick="saveCounts()">Save Counts</button>
     <button class="empty-btn" onclick="saveEmptyBay()">Empty Bay / No Plants</button>
 
-    ${lastUpdated ? `<div class="last-updated">Last updated: ${lastUpdated}</div>` : ""}
+    ${lastUpdated ? `<div class="last-updated">Last updated: ${lastScout ? lastScout + " - " : ""}${lastUpdated}</div>` : ""}
 
     <div id="message" class="message"></div>
   `;
