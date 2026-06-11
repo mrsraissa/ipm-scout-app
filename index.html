@@ -126,34 +126,38 @@ function updateBottomBar(screen) {
 function selectScout() {
 
   let html = `
-    <h2>Select Scout</h2>
+    <h2>Scout Name</h2>
 
-    <div class="grid">
-      <button class="btn" onclick="setScout('Raissa')">Raissa</button>
-      <button class="btn" onclick="setScout('Mary')">Mary</button>
-      <button class="btn" onclick="setScout('Brandon')">Brandon</button>
-      <button class="btn" onclick="setScout('Larry')">Larry</button>
-    </div>
+    <input
+      id="scoutNameInput"
+      class="scout-input"
+      type="text"
+      placeholder="Enter your name"
+    >
+
+    <button class="save-btn" onclick="saveScoutName()">
+      Continue
+    </button>
   `;
 
   document.getElementById("sectionContainer").innerHTML = html;
 }
+function saveScoutName() {
+  const name = document.getElementById("scoutNameInput").value.trim();
 
-function setScout(name) {
+  if (!name) {
+    alert("Please enter your name.");
+    return;
+  }
 
   currentScout = name;
-
-  localStorage.setItem(
-    "currentScout",
-    name
-  );
+  localStorage.setItem("currentScout", name);
 
   document.getElementById("currentScout").innerHTML =
     "Scout: " + name;
 
   renderSections();
 }
-
   
 function renderSections() {
   selectedSection = "";
