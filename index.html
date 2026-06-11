@@ -92,8 +92,8 @@ function loadStatus() {
         currentWeek ? "Week " + currentWeek : "";
 
       if (currentScout) {
-        document.getElementById("currentScout").innerHTML =
-  `Scout: ${currentScout} <button class="edit-scout-btn" onclick="changeScout()">✎</button>`;
+       document.getElementById("currentScout").innerHTML =
+  `Scout: ${currentScout} <span class="edit-scout-btn" onclick="changeScout()">✎</span>`;
 
         renderSections();
       } else {
