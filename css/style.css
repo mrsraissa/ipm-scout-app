@@ -115,26 +115,8 @@ h2{
   background:#94a3b8;
 }
 
-.section-progress{
-  margin-top:6px;
-  font-size:14px;
-  font-weight:600;
-  line-height:1.15;
-}
-
 .section-grid .btn:last-child{
   grid-column:2;
-}
-
-.back-btn{
-  background:#cbd5e1;
-  color:#064e3b;
-  border:none;
-  border-radius:10px;
-  padding:10px 16px;
-  font-weight:700;
-  cursor:pointer;
-  margin-bottom:16px;
 }
 
 .entry-row{
@@ -203,12 +185,20 @@ textarea{
   font-weight:700;
 }
 
-/* Mobile */
+.bottom-bar{
+  display:none;
+}
 
+.bottom-bar.hidden{
+  display:none;
+}
+
+/* Mobile */
 @media(max-width:800px){
 
   .layout{
     display:block;
+    min-height:100vh;
   }
 
   .sidebar{
@@ -216,10 +206,11 @@ textarea{
     height:auto;
     display:flex;
     flex-direction:row;
-    gap:6px;
+    justify-content:space-around;
+    gap:4px;
     overflow-x:auto;
     align-items:center;
-    padding:8px 10px;
+    padding:8px 8px;
     box-sizing:border-box;
   }
 
@@ -230,70 +221,73 @@ textarea{
   .nav-link{
     margin-top:0;
     white-space:nowrap;
-    padding:9px 11px;
-    font-size:14px;
-    border-radius:12px;
+    padding:8px 8px;
+    font-size:13px;
+    border-radius:10px;
   }
 
   .container{
-  width:100%;
-  padding:8px 8px 60px;
-}
+    width:100%;
+    padding:10px 8px 62px;
+    box-sizing:border-box;
+  }
 
   h1{
     font-size:26px;
-    margin:6px 0 0;
+    margin:10px 0 0;
+    line-height:1.05;
   }
 
   #weekDisplay{
     font-size:16px;
-    margin:0;
+    margin:2px 0 6px;
   }
 
   .user-box{
-    font-size:16px;
-    margin-bottom:5px;
+    display:none;
   }
 
   .card{
     padding:12px;
     border-radius:20px;
-    margin-bottom:45px;
+    margin-bottom:54px;
+  }
+
+  h2{
+    font-size:24px;
+    margin:4px 0 8px;
   }
 
   .grid{
     grid-template-columns:repeat(3,1fr);
     gap:10px;
+    margin-bottom:10px;
   }
 
   .btn{
     padding:10px 6px;
     font-size:21px;
     min-height:56px;
+    border-radius:14px;
   }
 
   .section-grid .btn:last-child{
     grid-column:2;
   }
 
-  #entryContainer h2,
-  #bayContainer h2{
+  .section-percent{
+    text-align:center;
     font-size:24px;
-    margin:4px 0 6px;
+    font-weight:700;
+    color:#16a34a;
+    margin:18px 0 24px;
   }
-
- .section-percent{
-  text-align:center;
-  font-size:24px;
-  font-weight:700;
-  color:#16a34a;
-  margin:18px 0 24px;
-}
 
   .entry-row{
     min-height:30px;
     padding:4px 8px;
     margin-bottom:4px;
+    border-radius:12px;
   }
 
   .entry-row label{
@@ -305,12 +299,14 @@ textarea{
     height:30px;
     font-size:20px;
     padding:0;
+    border-radius:10px;
   }
 
   textarea{
     min-height:34px;
     font-size:14px;
     padding:6px;
+    border-radius:12px;
   }
 
   .save-btn,
@@ -318,37 +314,35 @@ textarea{
     padding:8px;
     font-size:18px;
     margin-top:5px;
+    border-radius:12px;
   }
 
-    .bottom-bar{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  height:48px !important;
-  min-height:48px !important;
-  max-height:48px !important;
-  padding:0 !important;
-  background:#065f46;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:999;
-}
+  .bottom-bar{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    height:54px;
+    background:#065f46;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:999;
+  }
 
   .bottom-bar.hidden{
     display:none;
   }
 
-   .bottom-bar button{
-  background:none;
-  border:none;
-  color:white;
-  height:48px !important;
-  line-height:48px !important;
-  font-size:18px !important;
-  font-weight:700;
-  padding:0 20px !important;
-  margin:0 !important;
-}
+  .bottom-bar button{
+    background:none;
+    border:none;
+    color:white;
+    height:54px;
+    line-height:54px;
+    font-size:20px;
+    font-weight:700;
+    padding:0 24px;
+    margin:0;
+  }
 }
