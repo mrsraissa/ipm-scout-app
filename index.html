@@ -24,11 +24,12 @@
     <div id="userName" class="user-box">Scout Entry</div>
 
     <div class="card">
-      <div id="sectionContainer"></div>
-      <div id="bayContainer"></div>
-      <div id="entryContainer"></div>
-    </div>
-    <footer class="bottom-bar">
+  <div id="sectionContainer"></div>
+  <div id="bayContainer"></div>
+  <div id="entryContainer"></div>
+</div>
+
+<footer id="bottomBar" class="bottom-bar hidden">
   <button onclick="goToSections()">Sections</button>
   <button onclick="goToBays()">Bays</button>
 </footer>
@@ -87,10 +88,12 @@ function loadStatus() {
   document.body.appendChild(script);
 }
 
-function renderSections() {
-  selectedSection = "";
+function showBays(section) {
+  const progress = getSectionPercent(section);
+  selectedSection = section;
   selectedBay = "";
 
+  document.getElementById("bottomBar").classList.remove("hidden");
   document.getElementById("bayContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
 
@@ -178,6 +181,9 @@ function getBayStatus(section, bay) {
 
 function showEntry(bay) {
   selectedBay = bay;
+
+  document.getElementById("bottomBar").classList.remove("hidden");
+
   document.getElementById("bayContainer").innerHTML = "";
 
   let html = `
