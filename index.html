@@ -145,20 +145,23 @@ function renderDashboard(data) {
     `;
   });
 
-  html += `
+ html += `
+  <div class="dashboard-card">
+    <h3>Pest Counts by Section</h3>
+
+    <div class="pest-legend">
+      TR = Thrips | AP = Aphids | WF = Whiteflies | FG = Fungus Gnats
     </div>
 
-    <div class="dashboard-card">
-      <h3>Pest Counts by Section</h3>
-      <table class="pest-table">
-        <tr>
-          <th>Sec</th>
-          <th>TR</th>
-          <th>AP</th>
-          <th>WF</th>
-          <th>FG</th>
-        </tr>
-  `;
+    <table class="pest-table">
+      <tr>
+        <th>Sec</th>
+        <th>TR</th>
+        <th>AP</th>
+        <th>WF</th>
+        <th>FG</th>
+      </tr>
+`;
 
   Object.keys(sectionData).forEach(section => {
     const p = sectionData[section].pests;
