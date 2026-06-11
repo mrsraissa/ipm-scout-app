@@ -273,15 +273,31 @@ textarea{
 
 .pest-table{
   width:100%;
-  border-collapse:collapse;
+  border-collapse:separate;
+  border-spacing:0;
   text-align:center;
   font-weight:700;
+  overflow:hidden;
+  border-radius:12px;
 }
 
-.pest-table th,
+.pest-table th{
+  background:#065f46;
+  color:white;
+  padding:8px 4px;
+}
+
 .pest-table td{
   padding:8px 4px;
   border-bottom:1px solid #e2e8f0;
+}
+
+.pest-table tr:nth-child(even) td{
+  background:#f8fafc;
+}
+
+.pest-table tr:last-child td{
+  border-bottom:none;
 }
 
 .hotspot-grid{
@@ -296,6 +312,13 @@ textarea{
   padding:12px;
   text-align:center;
   font-weight:700;
+  border-left:6px solid #16a34a;
+}
+
+.hotspot-pest{
+  font-size:14px;
+  color:#475569;
+  margin-bottom:4px;
 }
 
 .hotspot-card strong{
@@ -306,6 +329,22 @@ textarea{
 
 .hotspot-card span{
   color:#16a34a;
+  font-size:16px;
+}
+.hotspot-thrips{
+  border-left-color:#16a34a;
+}
+
+.hotspot-aphids{
+  border-left-color:#84cc16;
+}
+
+.hotspot-whiteflies{
+  border-left-color:#f59e0b;
+}
+
+.hotspot-fungus{
+  border-left-color:#64748b;
 }
 .pest-legend{
   text-align:center;
