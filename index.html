@@ -159,11 +159,20 @@ function saveScoutName() {
 
   renderSections();
 }
-  
+ function showScoutWithPencil() {
+  document.getElementById("currentScout").innerHTML =
+    `Scout: ${currentScout}&nbsp;<span class="edit-scout-btn" onclick="changeScout()">✎</span>`;
+}
+
+function showScoutNameOnly() {
+  document.getElementById("currentScout").innerHTML =
+    `Scout: ${currentScout}`;
+} 
 function renderSections() {
   selectedSection = "";
   selectedBay = "";
 updateBottomBar("sections");
+  showScoutWithPencil();
   document.getElementById("currentScout").style.display = "block";
 
   document.getElementById("bayContainer").innerHTML = "";
@@ -189,6 +198,7 @@ function showBays(section) {
   selectedBay = "";
 
   updateBottomBar("bays");
+  showScoutNameOnly();
   document.getElementById("currentScout").style.display = "block";
 
   document.getElementById("sectionContainer").innerHTML = "";
@@ -282,6 +292,8 @@ function showEntry(bay, entryData = null) {
   selectedBay = bay;
 
   updateBottomBar("entry");
+  showScoutNameOnly();
+  
   document.getElementById("currentScout").style.display = "block";
 
   document.getElementById("bayContainer").innerHTML = "";
