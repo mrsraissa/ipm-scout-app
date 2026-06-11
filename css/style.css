@@ -451,7 +451,24 @@ textarea{
 .aphids-block{
   background:#fde68a;
 }
+.download-btn{
+  width:100%;
+  margin-bottom:12px;
+  background:#065f46;
+  color:white;
+  border:none;
+  border-radius:12px;
+  padding:12px;
+  font-size:16px;
+  font-weight:800;
+  cursor:pointer;
+}
 
+#heatMapExport{
+  background:white;
+  padding:10px;
+  border-radius:14px;
+}
 
 
 /* Mobile */
