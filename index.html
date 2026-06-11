@@ -28,6 +28,10 @@
       <div id="bayContainer"></div>
       <div id="entryContainer"></div>
     </div>
+    <footer class="bottom-bar">
+  <button onclick="goToSections()">Sections</button>
+  <button onclick="goToBays()">Bays</button>
+</footer>
   </main>
 </div>
 
@@ -262,6 +266,15 @@ async function saveEmptyBay() {
 
   document.getElementById("message").innerHTML = "Empty bay saved";
   setTimeout(() => showBays(selectedSection), 600);
+}
+  function goToSections() {
+  renderSections();
+}
+
+function goToBays() {
+  if (selectedSection) {
+    showBays(selectedSection);
+  }
 }
 </script>
 
