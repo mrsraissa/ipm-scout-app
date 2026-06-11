@@ -332,30 +332,29 @@ textarea{
 @media(max-width:800px){
 
   .bottom-bar{
-    position:fixed;
-    bottom:0;
-    left:0;
-    right:0;
-    display:flex;
-    justify-content:center;
-    gap:18px;
-    background:#065f46;
-    padding:10px 18px;
-    z-index:999;
-  }
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  display:flex;
+  justify-content:center;
+  background:#065f46;
+  padding:6px 14px;
+  z-index:999;
+}
 
   .bottom-bar.hidden{
     display:none;
   }
 
   .bottom-bar button{
-    border:none;
-    background:transparent;
-    color:white;
-    font-size:18px;
-    font-weight:700;
-    padding:10px 18px;
-  }
+  border:none;
+  background:transparent;
+  color:white;
+  font-size:16px;
+  font-weight:700;
+  padding:8px 18px;
+}
 
   .container{
     padding-bottom:72px;
