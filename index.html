@@ -28,7 +28,7 @@
     <h1>SCG IPM Scout</h1>
     <div id="weekDisplay">Loading week...</div>
     <div id="currentScout"></div>
-<button id="changeScoutBtn" onclick="changeScout()">Change Scout</button>
+
     
 
     <div class="card">
@@ -93,7 +93,7 @@ function loadStatus() {
 
       if (currentScout) {
         document.getElementById("currentScout").innerHTML =
-          "Scout: " + currentScout;
+  `Scout: ${currentScout} <button class="edit-scout-btn" onclick="changeScout()">✎</button>`;
 
         renderSections();
       } else {
@@ -164,6 +164,7 @@ function renderSections() {
   selectedSection = "";
   selectedBay = "";
 updateBottomBar("sections");
+  document.getElementById("currentScout").style.display = "block";
 
   document.getElementById("bayContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
@@ -188,6 +189,7 @@ function showBays(section) {
   selectedBay = "";
 
   updateBottomBar("bays");
+  document.getElementById("currentScout").style.display = "none";
 
   document.getElementById("sectionContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
@@ -280,6 +282,7 @@ function showEntry(bay, entryData = null) {
   selectedBay = bay;
 
   updateBottomBar("entry");
+  document.getElementById("currentScout").style.display = "none";
 
   document.getElementById("bayContainer").innerHTML = "";
 
