@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SCG IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=100">
+  <link rel="stylesheet" href="css/style.css?v=101">
 </head>
 
 <body>
@@ -20,6 +20,7 @@
 
   <main class="container">
     <h1>SCG IPM Scout</h1>
+    <div id="weekDisplay">Loading week...</div>
     <div id="userName" class="user-box">Scout Entry</div>
 
     <div class="card">
@@ -55,8 +56,32 @@ const sectionOrder = ["S1","S2","S3","S4","S5","S6","S7","S8","S9","9A","9B","10
 
 let selectedSection = "";
 let selectedBay = "";
+let weekStatus = {};
+let currentWeek = "";
 
 renderSections();
+loadStatus();
+
+function loadStatus() {
+  const callbackName = "statusCallback_" + Date.now();
+
+  window[callbackName] = function(data) {
+    if (data.success) {
+      weekStatus = data.records || {};
+      currentWeek = data.week || "";
+      document.getElementById("weekDisplay").innerHTML =
+        currentWeek ? "Week " + currentWeek : "";
+      renderSections();
+    }
+
+    delete window[callbackName];
+    script.remove();
+  };
+
+  const script = document.createElement("script");
+  script.src = API_URL + "?action=getStatus&callback=" + callbackName;
+  document.body.appendChild(script);
+}
 
 function renderSections() {
   selectedSection = "";
@@ -68,11 +93,32 @@ function renderSections() {
   let html = `<h2>Select Section</h2><div class="grid section-grid">`;
 
   sectionOrder.forEach(section => {
-    html += `<button class="btn" onclick="showBays('${section}')">${section}</button>`;
+    html += `
+      <button class="btn" onclick="showBays('${section}')">
+        ${section}
+        <div class="section-progress">${getSectionProgress(section)}</div>
+      </button>
+    `;
   });
 
   html += `</div>`;
   document.getElementById("sectionContainer").innerHTML = html;
+}
+
+function getSectionProgress(section) {
+  const total = bayMap[section].length;
+  let completed = 0;
+
+  bayMap[section].forEach(bay => {
+    const key = section + "|" + bay;
+    if (weekStatus[key] === "Scouted" || weekStatus[key] === "Empty") {
+      completed++;
+    }
+  });
+
+  const pct = Math.round((completed / total) * 100);
+
+  return `${completed}/${total}<br>${pct}%`;
 }
 
 function showBays(section) {
@@ -89,11 +135,23 @@ function showBays(section) {
   `;
 
   bayMap[section].forEach(bay => {
-    html += `<button class="btn not-scouted" onclick="showEntry('${bay}')">${bay}</button>`;
+    const statusClass = getBayStatus(section, bay);
+
+    html += `<button class="btn ${statusClass}" onclick="showEntry('${bay}')">${bay}</button>`;
   });
 
   html += `</div>`;
   document.getElementById("bayContainer").innerHTML = html;
+}
+
+function getBayStatus(section, bay) {
+  const key = section + "|" + bay;
+  const status = weekStatus[key];
+
+  if (status === "Scouted") return "scouted";
+  if (status === "Empty") return "empty";
+
+  return "not-scouted";
 }
 
 function showEntry(bay) {
@@ -146,6 +204,7 @@ function sendToSheet(params) {
 
 async function saveCounts() {
   const values = {};
+
   document.querySelectorAll("#entryContainer input").forEach(input => {
     values[input.dataset.pest] = input.value;
   });
@@ -164,6 +223,8 @@ async function saveCounts() {
     notes: document.getElementById("notes").value
   });
 
+  weekStatus[selectedSection + "|" + selectedBay] = "Scouted";
+
   document.getElementById("message").innerHTML = "Saved";
   setTimeout(() => showBays(selectedSection), 600);
 }
@@ -178,6 +239,8 @@ async function saveEmptyBay() {
     status: "Empty",
     notes: document.getElementById("notes").value || "No plants"
   });
+
+  weekStatus[selectedSection + "|" + selectedBay] = "Empty";
 
   document.getElementById("message").innerHTML = "Empty bay saved";
   setTimeout(() => showBays(selectedSection), 600);
