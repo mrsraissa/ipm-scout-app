@@ -132,7 +132,7 @@ function showBays(section) {
   selectedSection = section;
   selectedBay = "";
 
-  document.getElementById("bottomBar").classList.remove("hidden");
+  updateBottomBar("bays");
 
   document.getElementById("sectionContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
@@ -180,7 +180,7 @@ function getBayStatus(section, bay) {
 function showEntry(bay) {
   selectedBay = bay;
 
-  document.getElementById("bottomBar").classList.remove("hidden");
+  updateBottomBar("entry");
 
   document.getElementById("bayContainer").innerHTML = "";
 
