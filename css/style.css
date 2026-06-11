@@ -353,7 +353,104 @@ textarea{
   margin-top:10px;
   font-style:italic;
 }
+.heat-card{
+  background:#f8fafc;
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:16px;
+}
 
+.heat-title{
+  font-size:18px;
+  font-weight:800;
+  color:#064e3b;
+  margin-bottom:10px;
+}
+
+.heat-subtitle{
+  font-size:13px;
+  color:#64748b;
+  font-weight:700;
+  margin-bottom:10px;
+}
+
+.heat-row{
+  display:flex;
+  gap:4px;
+  overflow-x:auto;
+  padding-bottom:6px;
+}
+
+.heat-cell{
+  min-width:72px;
+  height:54px;
+  border-radius:8px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  font-weight:800;
+  color:#111827;
+}
+
+.heat-cell span{
+  font-size:12px;
+  margin-top:3px;
+}
+
+.heat-low{
+  background:#fef3c7;
+}
+
+.heat-mid{
+  background:#facc15;
+}
+
+.heat-high{
+  background:#84cc16;
+}
+
+.heat-very-high{
+  background:#3f7d20;
+  color:white;
+}
+
+.hotspot-strip{
+  display:flex;
+  gap:4px;
+  overflow-x:auto;
+  padding-bottom:6px;
+}
+
+.hotspot-block{
+  min-width:86px;
+  height:54px;
+  border-radius:8px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  font-weight:800;
+  background:#fed7aa;
+  color:#111827;
+}
+
+.hotspot-block strong{
+  font-size:18px;
+}
+
+.hotspot-block span{
+  font-size:12px;
+  margin-top:3px;
+}
+
+.thrips-block{
+  background:#fb923c;
+}
+
+.aphids-block{
+  background:#fde68a;
+}
 
 
 
@@ -536,4 +633,7 @@ textarea{
   box-sizing:border-box;
   margin-bottom:12px;
 }
+
+
+  
 }
