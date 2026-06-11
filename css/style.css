@@ -204,6 +204,7 @@ textarea{
 }
 
 /* Mobile */
+/* Mobile */
 @media(max-width:800px){
 
   .layout{
@@ -236,7 +237,7 @@ textarea{
 
   .container{
     width:100%;
-    padding:8px;
+    padding:8px 8px 48px;
     box-sizing:border-box;
   }
 
@@ -258,6 +259,7 @@ textarea{
   .card{
     padding:12px;
     border-radius:20px;
+    margin-bottom:45px;
   }
 
   .grid{
@@ -275,25 +277,19 @@ textarea{
     grid-column:2;
   }
 
-  .back-btn{
-    padding:6px 10px;
-    font-size:15px;
-    margin-bottom:4px;
-  }
-
   #entryContainer h2,
   #bayContainer h2{
     font-size:24px;
     margin:4px 0 6px;
   }
 
- .section-percent{
-  text-align:center;
-  font-size:28px;
-  font-weight:700;
-  color:#16a34a;
-  margin:20px 0 30px 0;
-}
+  .section-percent{
+    text-align:center;
+    font-size:28px;
+    font-weight:700;
+    color:#16a34a;
+    margin:20px 0 30px;
+  }
 
   .entry-row{
     min-height:30px;
@@ -324,44 +320,32 @@ textarea{
     font-size:18px;
     margin-top:5px;
   }
-.bottom-bar{
-  display:none;
-}
 
-.bottom-bar.hidden{
-  display:none;
-}
-
-@media(max-width:800px){
-
-.bottom-bar{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  height:38px;
-  background:#065f46;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:999;
-}
+  .bottom-bar{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    height:36px;
+    background:#065f46;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:999;
+  }
 
   .bottom-bar.hidden{
     display:none;
   }
 
-.bottom-bar button{
-  background:none;
-  border:none;
-  color:white;
-  font-size:17px;
-  font-weight:700;
-}
-.card{
-  margin-bottom:50px;
-}
-  .container{
-    padding-bottom:72px;
+  .bottom-bar button{
+    background:none;
+    border:none;
+    color:white;
+    font-size:16px;
+    font-weight:700;
+    padding:0;
+    margin:0;
+    line-height:1;
   }
 }
