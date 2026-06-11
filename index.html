@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
- <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -12,7 +11,7 @@
   <title>IPM Scout</title>
   <link rel="stylesheet" href="css/style.css?v=113">
 </head>
-</head>
+
 
 <body>
 
@@ -186,7 +185,32 @@ function getBayStatus(section, bay) {
 
   return "not-scouted";
 }
-function handleBayClick(bay) {
+function getEntryData(section, bay) {
+  return new Promise((resolve) => {
+    const callbackName = "entryCallback_" + Date.now();
+
+    window[callbackName] = function(data) {
+      resolve(data);
+
+      delete window[callbackName];
+      script.remove();
+    };
+
+    const script = document.createElement("script");
+    script.src =
+      API_URL +
+      "?action=getEntry" +
+      "&section=" + encodeURIComponent(section) +
+      "&bay=" + encodeURIComponent(bay) +
+      "&callback=" + callbackName;
+
+    document.body.appendChild(script);
+  });
+}
+
+
+ 
+async function handleBayClick(bay) {
   const key = selectedSection + "|" + bay;
   const status = weekStatus[key];
 
@@ -198,11 +222,15 @@ function handleBayClick(bay) {
     if (!answer) {
       return;
     }
+
+    const entryData = await getEntryData(selectedSection, bay);
+    showEntry(bay, entryData);
+    return;
   }
 
   showEntry(bay);
 }
-function showEntry(bay) {
+function showEntry(bay, entryData = null) {
   selectedBay = bay;
 
   updateBottomBar("entry");
@@ -214,26 +242,32 @@ function showEntry(bay) {
   `;
 
   pests.forEach(pest => {
-    html += `
-      <div class="entry-row">
-        <label>${pest}</label>
-        <input type="number" min="0" placeholder="0" data-pest="${pest}">
-      </div>
-    `;
-  });
+  const savedValue = entryData && entryData.counts[pest] !== "" ? entryData.counts[pest] : "";
 
   html += `
+    <div class="entry-row">
+      <label>${pest}</label>
+      <input type="number" min="0" placeholder="0" value="${savedValue}" data-pest="${pest}">
+    </div>
+  `;
+});
+
+  const savedNotes = entryData ? entryData.notes || "" : "";
+const lastUpdated = entryData && entryData.lastUpdated
+  ? new Date(entryData.lastUpdated).toLocaleString()
+  : "";
+
+html += `
     <label><strong>Notes</strong></label>
-    <textarea id="notes" placeholder="Crop, location, treatment, beneficials..."></textarea>
+    <textarea id="notes" placeholder="Crop, location, treatment, beneficials...">${savedNotes}</textarea>
 
     <button class="save-btn" onclick="saveCounts()">Save Counts</button>
     <button class="empty-btn" onclick="saveEmptyBay()">Empty Bay / No Plants</button>
 
+    ${lastUpdated ? `<div class="last-updated">Last updated: ${lastUpdated}</div>` : ""}
+
     <div id="message" class="message"></div>
   `;
-
-  document.getElementById("entryContainer").innerHTML = html;
-}
 
 function sendToSheet(params) {
   const formData = new URLSearchParams();
