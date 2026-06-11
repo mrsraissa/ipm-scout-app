@@ -76,11 +76,6 @@ let currentWeek = "";
   let currentScout =
   localStorage.getItem("currentScout") || "";
 
-if (currentScout) {
-  renderSections();
-} else {
-  selectScout();
-}
 
 loadStatus();
 
@@ -97,7 +92,17 @@ function loadStatus() {
   document.getElementById("currentScout").innerHTML =
     "Scout: " + currentScout;
 }
-      renderSections();
+     if (currentScout) {
+
+  document.getElementById("currentScout").innerHTML =
+    "Scout: " + currentScout;
+
+  renderSections();
+
+} else {
+
+  selectScout();
+
     }
 
     delete window[callbackName];
