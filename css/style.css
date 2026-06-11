@@ -212,6 +212,13 @@ textarea{
 .error-message{
   color:#dc2626;
 }
+.hidden-page{
+  display:none;
+}
+
+.page h2{
+  text-align:center;
+}
 /* Mobile */
 @media(max-width:800px){
 
