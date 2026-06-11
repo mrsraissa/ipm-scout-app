@@ -36,10 +36,8 @@
   <div id="bayContainer"></div>
   <div id="entryContainer"></div>
 </div>
-
+    
 <div id="dashboardPage" class="card page hidden-page">
-  <h2>Dashboard</h2>
-  <p>Dashboard coming next.</p>
 </div>
 
 <div id="heatmapsPage" class="card page hidden-page">
@@ -118,40 +116,64 @@ function renderDashboard(data) {
   const sectionData = data.sectionData;
   const hotspots = data.hotspots;
 
-  let html = `
-    <h2>Dashboard</h2>
+ let html = `
+  <h2>Dashboard</h2>
 
-    <div class="dashboard-card">
-      <div class="dashboard-title">Week ${data.week}</div>
-      <div class="dashboard-percent">${data.progress}% Complete</div>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width:${data.progress}%"></div>
-      </div>
+  <div class="dashboard-card">
+    <div class="dashboard-title">Week ${data.week}</div>
+    <div class="dashboard-percent">${data.progress}% Complete</div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width:${data.progress}%"></div>
     </div>
+  </div>
 
-    <div class="dashboard-card">
-      <h3>Section Completion</h3>
-  `;
+  <div class="dashboard-card">
+    <h3>Section Completion</h3>
+`;
 
-  Object.keys(sectionData).forEach(section => {
-    html += `
-      <div class="section-row">
-        <span>${section}</span>
-        <div class="small-progress">
-          <div class="small-fill" style="width:${sectionData[section].progress}%"></div>
-        </div>
-        <strong>${sectionData[section].progress}%</strong>
+Object.keys(sectionData).forEach(section => {
+  html += `
+    <div class="section-row">
+      <span>${section}</span>
+      <div class="small-progress">
+        <div class="small-fill" style="width:${sectionData[section].progress}%"></div>
       </div>
-    `;
-  });
+      <strong>${sectionData[section].progress}%</strong>
+    </div>
+  `;
+});
 
- html += `
+html += `
+  </div>
+
+  <div class="dashboard-card">
+    <h3>Hotspots</h3>
+    <div class="hotspot-grid">
+`;
+
+Object.keys(hotspots).forEach(pest => {
+  const shortName = {
+    "Thrips": "TR",
+    "Aphids": "AP",
+    "Whiteflies": "WF",
+    "Fungus Gnats": "FG"
+  }[pest];
+
+  html += `
+    <div class="hotspot-card">
+      <div>${shortName}</div>
+      <strong>${hotspots[pest].section}</strong>
+      <span>${hotspots[pest].value}</span>
+    </div>
+  `;
+});
+
+html += `
+    </div>
+  </div>
+
   <div class="dashboard-card">
     <h3>Pest Counts by Section</h3>
-
-    <div class="pest-legend">
-      TR = Thrips | AP = Aphids | WF = Whiteflies | FG = Fungus Gnats
-    </div>
 
     <table class="pest-table">
       <tr>
@@ -163,19 +185,19 @@ function renderDashboard(data) {
       </tr>
 `;
 
-  Object.keys(sectionData).forEach(section => {
-    const p = sectionData[section].pests;
+Object.keys(sectionData).forEach(section => {
+  const p = sectionData[section].pests;
 
-    html += `
-      <tr>
-        <td>${section}</td>
-        <td>${p["Thrips"]}</td>
-        <td>${p["Aphids"]}</td>
-        <td>${p["Whiteflies"]}</td>
-        <td>${p["Fungus Gnats"]}</td>
-      </tr>
-    `;
-  });
+  html += `
+    <tr>
+      <td>${section}</td>
+      <td>${p["Thrips"]}</td>
+      <td>${p["Aphids"]}</td>
+      <td>${p["Whiteflies"]}</td>
+      <td>${p["Fungus Gnats"]}</td>
+    </tr>
+  `;
+});
 
 html += `
       </table>
@@ -183,39 +205,10 @@ html += `
       <div class="pest-legend">
         TR = Thrips | AP = Aphids | WF = Whiteflies | FG = Fungus Gnats
       </div>
-
     </div>
-
-    <div class="dashboard-card">
-      <h3>Hotspots</h3>
-      <div class="hotspot-grid">
 `;
 
-  Object.keys(hotspots).forEach(pest => {
-    const shortName = {
-      "Thrips": "TR",
-      "Aphids": "AP",
-      "Whiteflies": "WF",
-      "Fungus Gnats": "FG"
-    }[pest];
-
-    html += `
-      <div class="hotspot-card">
-        <div>${shortName}</div>
-        <strong>${hotspots[pest].section}</strong>
-        <span>${hotspots[pest].value}</span>
-      </div>
-    `;
-  });
-
-  html += `
-      </div>
-    </div>
-  `;
-
-  document.getElementById("dashboardPage").innerHTML = html;
-}
-
+document.getElementById("dashboardPage").innerHTML = html;
 
   
   
