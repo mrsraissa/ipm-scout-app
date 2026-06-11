@@ -86,23 +86,18 @@ function loadStatus() {
     if (data.success) {
       weekStatus = data.records || {};
       currentWeek = data.week || "";
+
       document.getElementById("weekDisplay").innerHTML =
         currentWeek ? "Week " + currentWeek : "";
+
       if (currentScout) {
-  document.getElementById("currentScout").innerHTML =
-    "Scout: " + currentScout;
-}
-     if (currentScout) {
+        document.getElementById("currentScout").innerHTML =
+          "Scout: " + currentScout;
 
-  document.getElementById("currentScout").innerHTML =
-    "Scout: " + currentScout;
-
-  renderSections();
-
-} else {
-
-  selectScout();
-
+        renderSections();
+      } else {
+        selectScout();
+      }
     }
 
     delete window[callbackName];
