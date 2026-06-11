@@ -10,6 +10,7 @@
 
   <title>IPM Scout</title>
   <link rel="stylesheet" href="css/style.css?v=113">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
 
@@ -149,8 +150,10 @@ function renderHeatMaps(data) {
   );
 
   let html = `
-    <h2>Week ${data.week} Heat Maps</h2>
+    <button class="download-btn" onclick="downloadHeatMap()">Download PNG</button>
 
+    <div id="heatMapExport">
+      <h2>Week ${data.week} Heat Maps</h2>
     <div class="heat-card">
       <div class="heat-title">Fungus Gnats</div>
       <div class="heat-subtitle">Total count by section</div>
@@ -170,9 +173,11 @@ function renderHeatMaps(data) {
     `;
   });
 
-  html += `
+   html += `
       </div>
     </div>
+    </div>
+  `;
 
     <div class="heat-card">
       <div class="heat-title">Thrips</div>
@@ -225,7 +230,19 @@ function renderHeatMaps(data) {
 
   document.getElementById("heatmapsPage").innerHTML = html;
 }
+function downloadHeatMap() {
+  const element = document.getElementById("heatMapExport");
 
+  html2canvas(element, {
+    backgroundColor: "#ffffff",
+    scale: 2
+  }).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "IPM_Heat_Map.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  });
+}
 
 
 
