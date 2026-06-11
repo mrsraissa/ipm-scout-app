@@ -105,7 +105,27 @@ let currentWeek = "";
   script.src = API_URL + "?action=getDashboard&callback=" + callbackName;
   document.body.appendChild(script);
 }
+function loadHeatMaps() {
+  const callbackName = "heatMapCallback_" + Date.now();
 
+  window[callbackName] = function(data) {
+    renderHeatMaps(data);
+
+    delete window[callbackName];
+    script.remove();
+  };
+
+  const script = document.createElement("script");
+  script.src = API_URL + "?action=getHeatMaps&callback=" + callbackName;
+  document.body.appendChild(script);
+}
+
+
+
+
+
+
+  
 function renderDashboard(data) {
   if (!data || !data.success) {
     document.getElementById("dashboardPage").innerHTML =
@@ -249,6 +269,7 @@ if (page === "heatmaps") {
   document.querySelectorAll(".nav-link")[2].classList.add("active");
   updateBottomBar("sections");
   showScoutNameOnly();
+  loadHeatMaps();
 }
 
 if (page === "reports") {
