@@ -206,136 +206,76 @@ textarea{
 /* Mobile */
 @media(max-width:800px){
 
-  .layout{
-    flex-direction:column;
-  }
-
   .sidebar{
-    width:100%;
-    display:flex;
-    gap:6px;
-    overflow-x:auto;
-    align-items:center;
-    padding:8px 10px;
-    scrollbar-width:none;
-  }
-
-  .sidebar::-webkit-scrollbar{
-    display:none;
-  }
-
-  .sidebar h2{
-    display:none;
+    padding:6px 8px;
+    gap:5px;
   }
 
   .nav-link{
-    margin-top:0;
-    white-space:nowrap;
-    padding:9px 11px;
-    font-size:14px;
-    border-radius:12px;
-  }
-
-  .container{
-    padding:8px;
+    font-size:13px;
+    padding:8px 9px;
   }
 
   h1{
-    font-size:30px;
-    margin:10px 0 0;
-    line-height:1.05;
+    font-size:26px;
+    margin:6px 0 0;
   }
 
   #weekDisplay{
-    font-size:18px;
-    margin-top:4px;
-    margin-bottom:0;
+    font-size:16px;
+    margin:0;
   }
 
   .user-box{
-    font-size:18px;
-    margin-bottom:8px;
+    font-size:16px;
+    margin-bottom:5px;
   }
 
   .card{
-    padding:14px;
-    border-radius:22px;
+    padding:12px;
+    border-radius:20px;
   }
 
-  .grid{
-    grid-template-columns:repeat(3,1fr);
-    gap:10px;
-    margin-bottom:10px;
-  }
-
-  .btn{
-    padding:10px 6px;
-    font-size:22px;
-    min-height:58px;
-    border-radius:15px;
-  }
-
-  .section-grid .btn:last-child{
-    grid-column:2;
-  }
-
-  .section-percent{
-    text-align:center;
-    font-size:22px;
-    font-weight:800;
-    color:#15803d;
-    margin:8px 0 24px;
-  }
-
-  .back-btn{
-    padding:7px 14px;
-    font-size:17px;
-    margin-bottom:8px;
-    border-radius:14px;
-  }
-
-  #entryContainer h2,
-  #bayContainer h2{
-    font-size:30px;
-    margin:8px 0 12px;
-    line-height:1.05;
+  #entryContainer h2{
+    font-size:26px;
+    margin:4px 0 8px;
   }
 
   .entry-row{
-    padding:7px 12px;
-    margin-bottom:6px;
-    min-height:42px;
-    border-radius:14px;
-  }
-
-  .entry-row label{
-    font-size:21px;
-  }
-
-  .entry-row input{
-    width:78px;
-    height:34px;
-    font-size:24px;
-    padding:1px;
+    min-height:28px;
+    padding:3px 8px;
+    margin-bottom:3px;
     border-radius:12px;
   }
 
-  textarea{
-    min-height:48px;
+  .entry-row label{
     font-size:17px;
-    padding:8px;
-    border-radius:14px;
+  }
+
+  .entry-row input{
+    width:68px;
+    height:28px;
+    font-size:20px;
+    padding:0;
+  }
+
+  textarea{
+    min-height:30px;
+    font-size:14px;
+    padding:5px 8px;
   }
 
   .save-btn,
   .empty-btn{
-    padding:10px;
-    font-size:21px;
-    margin-top:7px;
-    border-radius:16px;
+    padding:7px;
+    font-size:18px;
+    margin-top:5px;
+    border-radius:14px;
   }
 
-  .message{
-    margin-top:8px;
+  .back-btn{
+    padding:6px 10px;
+    font-size:15px;
+    margin-bottom:4px;
   }
 }
