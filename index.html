@@ -153,11 +153,14 @@ function getHeatCellClass(value, pest) {
 function renderPestGrid(title, pest, threshold, bayCounts) {
   let activeBays = [];
 
-  sectionOrder.forEach(section => {
-    const sectionData = bayCounts[section] || {};
+  Object.keys(bayCounts).forEach(section => {
+    Object.keys(bayCounts[section]).forEach(bay => {
+      const bayData = bayCounts[section][bay] || {};
 
-    Object.keys(sectionData).forEach(bay => {
-      const value = sectionData[bay][pest] || 0;
+      const value =
+        Number(bayData[pest] || 0) ||
+        Number(bayData[pest.toLowerCase()] || 0) ||
+        Number(bayData[pest.replace(" ", "")] || 0);
 
       if (value >= threshold && !activeBays.includes(bay)) {
         activeBays.push(bay);
@@ -166,7 +169,7 @@ function renderPestGrid(title, pest, threshold, bayCounts) {
   });
 
   activeBays.sort((a, b) => {
-    return Number(a.replace("B", "")) - Number(b.replace("B", ""));
+    return Number(a.replace(/\D/g, "")) - Number(b.replace(/\D/g, ""));
   });
 
   let html = `
@@ -190,9 +193,15 @@ function renderPestGrid(title, pest, threshold, bayCounts) {
     html += `<tr><td class="bay-label">${bay}</td>`;
 
     sectionOrder.forEach(section => {
-      const sectionData = bayCounts[section] || {};
-      const bayData = sectionData[bay] || {};
-      const value = bayData[pest] || 0;
+      const bayData =
+        bayCounts[section] && bayCounts[section][bay]
+          ? bayCounts[section][bay]
+          : {};
+
+      const value =
+        Number(bayData[pest] || 0) ||
+        Number(bayData[pest.toLowerCase()] || 0) ||
+        Number(bayData[pest.replace(" ", "")] || 0);
 
       if (value >= threshold) {
         html += `<td class="${getHeatCellClass(value, pest)}">${value}</td>`;
@@ -222,7 +231,6 @@ function renderPestGrid(title, pest, threshold, bayCounts) {
 
   return html;
 }
-
 function renderHeatMaps(data) {
   if (!data || !data.success) {
     document.getElementById("heatmapsPage").innerHTML =
@@ -231,7 +239,7 @@ function renderHeatMaps(data) {
   }
 
   const fungusData = data.fungusGnatsBySection || {};
-  const bayCounts = data.bayCounts || {};
+  const bayCounts = data.bayCounts || data.bayData || data.countsByBay || {};
 
   const sectionNames = Object.keys(fungusData);
   const maxFG = Math.max(
