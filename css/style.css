@@ -369,4 +369,33 @@ textarea{
   font-weight:700;
   color:#64748b;
 }
+  #changeScoutBtn{
+  display:block;
+  margin:4px auto 12px;
+  border:none;
+  background:transparent;
+  color:#64748b;
+  font-weight:700;
+  font-size:13px;
+  text-decoration:underline;
+  cursor:pointer;
+}
+
+.success-message{
+  color:#16a34a;
+}
+
+.error-message{
+  color:#dc2626;
+}
+
+.scout-input{
+  width:100%;
+  padding:14px;
+  font-size:20px;
+  border-radius:12px;
+  border:1px solid #cbd5e1;
+  box-sizing:border-box;
+  margin-bottom:12px;
+}
 }
