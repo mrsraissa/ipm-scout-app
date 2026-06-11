@@ -29,10 +29,10 @@
       <div id="entryContainer"></div>
     </div>
 
-    <footer id="bottomBar" class="bottom-bar hidden">
-      <button onclick="goToSections()">Sections</button>
-      <button onclick="goToBays()">Bays</button>
-    </footer>
+   <footer id="bottomBar" class="bottom-bar hidden">
+  <button id="bottomSectionsBtn" onclick="goToSections()">Sections</button>
+  <button id="bottomBaysBtn" onclick="goToBays()">Bays</button>
+</footer>
   </main>
 </div>
 
@@ -87,12 +87,28 @@ function loadStatus() {
   script.src = API_URL + "?action=getStatus&callback=" + callbackName;
   document.body.appendChild(script);
 }
+function updateBottomBar(screen) {
+  const bar = document.getElementById("bottomBar");
+  const sectionsBtn = document.getElementById("bottomSectionsBtn");
+  const baysBtn = document.getElementById("bottomBaysBtn");
 
+  if (screen === "sections") {
+    bar.classList.add("hidden");
+    return;
+  }
+
+  bar.classList.remove("hidden");
+
+  sectionsBtn.style.display = screen === "bays" ? "block" : "none";
+  baysBtn.style.display = screen === "entry" ? "block" : "none";
+}
+
+
+  
 function renderSections() {
   selectedSection = "";
   selectedBay = "";
-
-  document.getElementById("bottomBar").classList.add("hidden");
+updateBottomBar("sections");
 
   document.getElementById("bayContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
@@ -122,8 +138,7 @@ function showBays(section) {
   document.getElementById("entryContainer").innerHTML = "";
 
   let html = `
-    <button class="back-btn" onclick="renderSections()">← Sections</button>
-    <h2>${section} - Select Bay</h2>
+        <h2>${section} - Select Bay</h2>
     <div class="section-percent">Progress: ${progress}%</div>
     <div class="grid bay-grid">
   `;
@@ -170,8 +185,7 @@ function showEntry(bay) {
   document.getElementById("bayContainer").innerHTML = "";
 
   let html = `
-    <button class="back-btn" onclick="showBays('${selectedSection}')">← Bays</button>
-    <h2>${selectedSection} - ${selectedBay}</h2>
+        <h2>${selectedSection} - ${selectedBay}</h2>
   `;
 
   pests.forEach(pest => {
