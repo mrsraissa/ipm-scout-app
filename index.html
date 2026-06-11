@@ -28,6 +28,7 @@
     <h1>SCG IPM Scout</h1>
     <div id="weekDisplay">Loading week...</div>
     <div id="currentScout"></div>
+<button id="changeScoutBtn" onclick="changeScout()">Change Scout</button>
     
 
     <div class="card">
@@ -345,42 +346,61 @@ async function saveCounts() {
   });
 
   document.getElementById("message").innerHTML = "Saving...";
+  document.getElementById("message").className = "message";
 
-  await sendToSheet({
-    scout: currentScout,
-    section: selectedSection,
-    bay: selectedBay,
-    status: "Scouted",
-    thrips: values["Thrips"] || 0,
-    aphids: values["Aphids"] || 0,
-    whiteflies: values["Whiteflies"] || 0,
-    fungusGnats: values["Fungus Gnats"] || 0,
-    notes: document.getElementById("notes").value
-  });
+  try {
+    await sendToSheet({
+      scout: currentScout,
+      section: selectedSection,
+      bay: selectedBay,
+      status: "Scouted",
+      thrips: values["Thrips"] || 0,
+      aphids: values["Aphids"] || 0,
+      whiteflies: values["Whiteflies"] || 0,
+      fungusGnats: values["Fungus Gnats"] || 0,
+      notes: document.getElementById("notes").value
+    });
 
-  weekStatus[selectedSection + "|" + selectedBay] = "Scouted";
+    weekStatus[selectedSection + "|" + selectedBay] = "Scouted";
 
-  document.getElementById("message").innerHTML = "Saved";
-  setTimeout(() => showBays(selectedSection), 600);
+    document.getElementById("message").innerHTML = "✓ Saved Successfully";
+    document.getElementById("message").className = "message success-message";
+
+    setTimeout(() => showBays(selectedSection), 900);
+
+  } catch (err) {
+    document.getElementById("message").innerHTML =
+      "Save failed. Check internet connection.";
+    document.getElementById("message").className = "message error-message";
+  }
 }
 
 async function saveEmptyBay() {
   document.getElementById("message").innerHTML = "Saving...";
+  document.getElementById("message").className = "message";
 
-  await sendToSheet({
-    scout: currentScout,
-    section: selectedSection,
-    bay: selectedBay,
-    status: "Empty",
-    notes: document.getElementById("notes").value || "No plants"
-  });
+  try {
+    await sendToSheet({
+      scout: currentScout,
+      section: selectedSection,
+      bay: selectedBay,
+      status: "Empty",
+      notes: document.getElementById("notes").value || "No plants"
+    });
 
-  weekStatus[selectedSection + "|" + selectedBay] = "Empty";
+    weekStatus[selectedSection + "|" + selectedBay] = "Empty";
 
-  document.getElementById("message").innerHTML = "Empty bay saved";
-  setTimeout(() => showBays(selectedSection), 600);
+    document.getElementById("message").innerHTML = "✓ Empty Bay Saved";
+    document.getElementById("message").className = "message success-message";
+
+    setTimeout(() => showBays(selectedSection), 900);
+
+  } catch (err) {
+    document.getElementById("message").innerHTML =
+      "Save failed. Check internet connection.";
+    document.getElementById("message").className = "message error-message";
+  }
 }
-
 function goToSections() {
   renderSections();
 }
@@ -389,6 +409,12 @@ function goToBays() {
   if (selectedSection) {
     showBays(selectedSection);
   }
+}
+  function changeScout() {
+  localStorage.removeItem("currentScout");
+  currentScout = "";
+  document.getElementById("currentScout").innerHTML = "";
+  selectScout();
 }
 </script>
 
