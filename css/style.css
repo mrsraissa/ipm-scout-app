@@ -348,4 +348,11 @@ textarea{
     padding:0 24px;
     margin:0;
   }
+  .last-updated{
+  text-align:center;
+  margin-top:8px;
+  font-size:13px;
+  font-weight:700;
+  color:#64748b;
+}
 }
