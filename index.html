@@ -93,13 +93,12 @@ function renderSections() {
   let html = `<h2>Select Section</h2><div class="grid section-grid">`;
 
   sectionOrder.forEach(section => {
-    html += `
-      <button class="btn" onclick="showBays('${section}')">
-        ${section}
-        <div class="section-progress">${getSectionProgress(section)}</div>
-      </button>
-    `;
-  });
+  html += `
+    <button class="btn" onclick="showBays('${section}')">
+      ${section}
+    </button>
+  `;
+});
 
   html += `</div>`;
   document.getElementById("sectionContainer").innerHTML = html;
@@ -122,6 +121,7 @@ function getSectionProgress(section) {
 }
 
 function showBays(section) {
+  const progress = getSectionPercent(section);
   selectedSection = section;
   selectedBay = "";
 
@@ -131,6 +131,9 @@ function showBays(section) {
   let html = `
     <button class="back-btn" onclick="renderSections()">← Sections</button>
     <h2>${section} - Select Bay</h2>
+<div class="section-percent">
+  Progress: ${progress}%
+</div>
     <div class="grid bay-grid">
   `;
 
@@ -142,6 +145,21 @@ function showBays(section) {
 
   html += `</div>`;
   document.getElementById("bayContainer").innerHTML = html;
+}
+
+  function getSectionPercent(section) {
+  const total = bayMap[section].length;
+  let completed = 0;
+
+  bayMap[section].forEach(bay => {
+    const key = section + "|" + bay;
+
+    if (weekStatus[key] === "Scouted" || weekStatus[key] === "Empty") {
+      completed++;
+    }
+  });
+
+  return Math.round((completed / total) * 100);
 }
 
 function getBayStatus(section, bay) {
