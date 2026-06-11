@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SCG IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=103">
+  <link rel="stylesheet" href="css/style.css?v=106">
 </head>
 
 <body>
@@ -24,15 +24,15 @@
     <div id="userName" class="user-box">Scout Entry</div>
 
     <div class="card">
-  <div id="sectionContainer"></div>
-  <div id="bayContainer"></div>
-  <div id="entryContainer"></div>
-</div>
+      <div id="sectionContainer"></div>
+      <div id="bayContainer"></div>
+      <div id="entryContainer"></div>
+    </div>
 
-<footer id="bottomBar" class="bottom-bar hidden">
-  <button onclick="goToSections()">Sections</button>
-  <button onclick="goToBays()">Bays</button>
-</footer>
+    <footer id="bottomBar" class="bottom-bar hidden">
+      <button onclick="goToSections()">Sections</button>
+      <button onclick="goToBays()">Bays</button>
+    </footer>
   </main>
 </div>
 
@@ -88,49 +88,35 @@ function loadStatus() {
   document.body.appendChild(script);
 }
 
-function showBays(section) {
-  const progress = getSectionPercent(section);
-  selectedSection = section;
+function renderSections() {
+  selectedSection = "";
   selectedBay = "";
 
-  document.getElementById("bottomBar").classList.remove("hidden");
+  document.getElementById("bottomBar").classList.add("hidden");
+
   document.getElementById("bayContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
 
   let html = `<h2>Select Section</h2><div class="grid section-grid">`;
 
   sectionOrder.forEach(section => {
-  html += `
-    <button class="btn" onclick="showBays('${section}')">
-      ${section}
-    </button>
-  `;
-});
+    html += `
+      <button class="btn" onclick="showBays('${section}')">
+        ${section}
+      </button>
+    `;
+  });
 
   html += `</div>`;
   document.getElementById("sectionContainer").innerHTML = html;
-}
-
-function getSectionProgress(section) {
-  const total = bayMap[section].length;
-  let completed = 0;
-
-  bayMap[section].forEach(bay => {
-    const key = section + "|" + bay;
-    if (weekStatus[key] === "Scouted" || weekStatus[key] === "Empty") {
-      completed++;
-    }
-  });
-
-  const pct = Math.round((completed / total) * 100);
-
-  return `${completed}/${total}<br>${pct}%`;
 }
 
 function showBays(section) {
   const progress = getSectionPercent(section);
   selectedSection = section;
   selectedBay = "";
+
+  document.getElementById("bottomBar").classList.remove("hidden");
 
   document.getElementById("sectionContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
@@ -138,15 +124,12 @@ function showBays(section) {
   let html = `
     <button class="back-btn" onclick="renderSections()">← Sections</button>
     <h2>${section} - Select Bay</h2>
-<div class="section-percent">
-  Progress: ${progress}%
-</div>
+    <div class="section-percent">Progress: ${progress}%</div>
     <div class="grid bay-grid">
   `;
 
   bayMap[section].forEach(bay => {
     const statusClass = getBayStatus(section, bay);
-
     html += `<button class="btn ${statusClass}" onclick="showEntry('${bay}')">${bay}</button>`;
   });
 
@@ -154,7 +137,7 @@ function showBays(section) {
   document.getElementById("bayContainer").innerHTML = html;
 }
 
-  function getSectionPercent(section) {
+function getSectionPercent(section) {
   const total = bayMap[section].length;
   let completed = 0;
 
@@ -273,7 +256,8 @@ async function saveEmptyBay() {
   document.getElementById("message").innerHTML = "Empty bay saved";
   setTimeout(() => showBays(selectedSection), 600);
 }
-  function goToSections() {
+
+function goToSections() {
   renderSections();
 }
 
