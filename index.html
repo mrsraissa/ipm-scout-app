@@ -152,16 +152,16 @@ html += `
 `;
 
 Object.keys(hotspots).forEach(pest => {
-  const shortName = {
-    "Thrips": "TR",
-    "Aphids": "AP",
-    "Whiteflies": "WF",
-    "Fungus Gnats": "FG"
+  const pestClass = {
+    "Thrips": "hotspot-thrips",
+    "Aphids": "hotspot-aphids",
+    "Whiteflies": "hotspot-whiteflies",
+    "Fungus Gnats": "hotspot-fungus"
   }[pest];
 
   html += `
-    <div class="hotspot-card">
-      <div>${shortName}</div>
+    <div class="hotspot-card ${pestClass}">
+      <div class="hotspot-pest">${pest}</div>
       <strong>${hotspots[pest].section}</strong>
       <span>${hotspots[pest].value}</span>
     </div>
