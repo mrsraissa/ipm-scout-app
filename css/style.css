@@ -376,13 +376,10 @@ textarea{
   color:#64748b;
 }
  .edit-scout-btn{
-  border:none;
-  background:transparent;
+  cursor:pointer;
   color:#64748b;
   font-size:14px;
   font-weight:700;
-  cursor:pointer;
-  padding-left:4px;
 }
 
 .scout-input{
