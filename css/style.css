@@ -325,6 +325,10 @@ textarea{
   display:none;
 }
 
+.bottom-bar.hidden{
+  display:none;
+}
+
 @media(max-width:800px){
 
   .bottom-bar{
@@ -333,26 +337,27 @@ textarea{
     left:0;
     right:0;
     display:flex;
-    justify-content:space-around;
-    gap:10px;
+    justify-content:center;
+    gap:18px;
     background:#065f46;
-    padding:10px 14px;
-    box-shadow:0 -4px 14px rgba(15,23,42,0.18);
+    padding:10px 18px;
     z-index:999;
   }
 
+  .bottom-bar.hidden{
+    display:none;
+  }
+
   .bottom-bar button{
-    flex:1;
     border:none;
-    border-radius:14px;
-    padding:12px;
-    font-size:17px;
-    font-weight:700;
+    background:transparent;
     color:white;
-    background:rgba(255,255,255,0.18);
+    font-size:18px;
+    font-weight:700;
+    padding:10px 18px;
   }
 
   .container{
-    padding-bottom:80px;
+    padding-bottom:72px;
   }
 }
