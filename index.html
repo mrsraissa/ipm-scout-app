@@ -150,37 +150,7 @@ function getHeatCellClass(value, pest) {
   return "map-empty";
 }
 
-function renderPestStrip(title, pest, threshold, bayCounts) {
-  let hotspots = [];
-
-  Object.keys(bayCounts).forEach(section => {
-    Object.keys(bayCounts[section]).forEach(bay => {
-      const bayData = bayCounts[section][bay] || {};
-      const value = Number(bayData[pest] || 0);
-
-      if (value >= threshold) {
-        hotspots.push({
-          label: section + " " + bay,
-          value: value
-        });
-      }
-    });
-  });
-
-  hotspots.sort((a, b) => {
-    const sectionA = a.label.split(" ")[0];
-    const sectionB = b.label.split(" ")[0];
-
-    const sectionIndexA = sectionOrder.indexOf(sectionA);
-    const sectionIndexB = sectionOrder.indexOf(sectionB);
-
-    if (sectionIndexA !== sectionIndexB) {
-      return sectionIndexA - sectionIndexB;
-    }
-
-    return a.label.localeCompare(b.label, undefined, { numeric: true });
-  });
-
+function renderHotspotStrip(title, threshold, hotspotList, pest) {
   let html = `
     <div class="heat-card strip-card">
       <div class="heat-title">${title}</div>
@@ -190,7 +160,7 @@ function renderPestStrip(title, pest, threshold, bayCounts) {
         <div class="heat-strip">
   `;
 
-  if (hotspots.length === 0) {
+  if (!hotspotList || hotspotList.length === 0) {
     html += `
       <div class="no-hotspots">
         No hotspots above threshold this week.
@@ -198,10 +168,10 @@ function renderPestStrip(title, pest, threshold, bayCounts) {
     `;
   }
 
-  hotspots.forEach(item => {
+  hotspotList.forEach(item => {
     html += `
-      <div class="strip-cell ${getHeatCellClass(item.value, pest)}">
-        <strong>${item.value}</strong>
+      <div class="strip-cell ${getHeatCellClass(item.count, pest)}">
+        <strong>${item.count}</strong>
         <span>${item.label}</span>
       </div>
     `;
@@ -265,8 +235,8 @@ function renderHeatMaps(data) {
       </div>
   `;
 
-html += renderPestStrip("Thrips", "Thrips", 15, bayCounts);
-html += renderPestStrip("Aphids", "Aphids", 5, bayCounts);
+html += renderHotspotStrip("Thrips", 15, data.thripsHotspots, "Thrips");
+html += renderHotspotStrip("Aphids", 5, data.aphidsHotspots, "Aphids");
 
   html += `
     </div>
