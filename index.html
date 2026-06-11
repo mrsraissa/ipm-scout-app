@@ -149,8 +149,40 @@ function getHeatCellClass(value, pest) {
 
   return "map-empty";
 }
+function renderHotspotStrip(title, threshold, hotspotList, pest) {
+  let html = `
+    <div class="heat-card">
+      <div class="heat-title">${title}</div>
+      <div class="heat-subtitle">Hot Spots by Bay — Threshold ≥ ${threshold}</div>
 
-function renderHotspotStr
+      <div class="hotspot-wrap">
+  `;
+
+  if (!hotspotList || hotspotList.length === 0) {
+    html += `
+      <div class="no-hotspots">
+        No hotspots above threshold this week.
+      </div>
+    `;
+  }
+
+  hotspotList.forEach(item => {
+    html += `
+      <div class="hotspot-cell ${getHeatCellClass(item.count, pest)}">
+        <strong>${item.count}</strong>
+        <span>${item.label}</span>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  return html;
+}
+
 function renderHeatMaps(data) {
   if (!data || !data.success) {
     document.getElementById("heatmapsPage").innerHTML =
