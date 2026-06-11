@@ -334,12 +334,12 @@ textarea{
 
 @media(max-width:800px){
 
-  .bottom-bar{
+.bottom-bar{
   position:fixed;
   bottom:0;
   left:0;
   right:0;
-  height:50px;
+  height:38px;
   background:#065f46;
   display:flex;
   justify-content:center;
@@ -351,17 +351,15 @@ textarea{
     display:none;
   }
 
- .bottom-bar button{
+.bottom-bar button{
   background:none;
   border:none;
   color:white;
-  font-size:20px;
+  font-size:17px;
   font-weight:700;
-  cursor:pointer;
-  padding:0;
 }
 .card{
-  margin-bottom:60px;
+  margin-bottom:50px;
 }
   .container{
     padding-bottom:72px;
