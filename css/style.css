@@ -469,7 +469,63 @@ textarea{
   padding:10px;
   border-radius:14px;
 }
+.map-scroll{
+  overflow-x:auto;
+}
 
+.heat-map-table{
+  border-collapse:separate;
+  border-spacing:3px;
+  width:100%;
+  min-width:760px;
+  text-align:center;
+  font-weight:800;
+}
+
+.heat-map-table th{
+  background:#065f46;
+  color:white;
+  padding:6px;
+  border-radius:6px;
+  font-size:12px;
+}
+
+.heat-map-table td{
+  width:48px;
+  height:34px;
+  border-radius:6px;
+  font-size:13px;
+}
+
+.bay-label{
+  background:#e2e8f0;
+  color:#334155;
+  font-weight:800;
+}
+
+.map-empty{
+  background:#f1f5f9;
+}
+
+.map-green{
+  background:#84cc16;
+  color:#111827;
+}
+
+.map-yellow{
+  background:#facc15;
+  color:#111827;
+}
+
+.map-orange{
+  background:#fb923c;
+  color:#111827;
+}
+
+.map-red{
+  background:#dc2626;
+  color:white;
+}
 
 /* Mobile */
 @media(max-width:800px){
