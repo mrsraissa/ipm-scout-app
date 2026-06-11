@@ -119,7 +119,112 @@ function loadHeatMaps() {
   script.src = API_URL + "?action=getHeatMaps&callback=" + callbackName;
   document.body.appendChild(script);
 }
+function getHeatClass(value, max) {
+  if (max === 0) return "heat-low";
 
+  const pct = value / max;
+
+  if (pct >= 0.75) return "heat-very-high";
+  if (pct >= 0.50) return "heat-high";
+  if (pct >= 0.25) return "heat-mid";
+
+  return "heat-low";
+}
+
+function renderHeatMaps(data) {
+  if (!data || !data.success) {
+    document.getElementById("heatmapsPage").innerHTML =
+      "<h2>Heat Maps</h2><p>Could not load heat map data.</p>";
+    return;
+  }
+
+  const fungusData = data.fungusGnatsBySection || {};
+  const thrips = data.thripsHotspots || [];
+  const aphids = data.aphidsHotspots || [];
+
+  const sectionNames = Object.keys(fungusData);
+  const maxFG = Math.max(
+    ...sectionNames.map(section => fungusData[section]["Fungus Gnats"] || 0),
+    0
+  );
+
+  let html = `
+    <h2>Week ${data.week} Heat Maps</h2>
+
+    <div class="heat-card">
+      <div class="heat-title">Fungus Gnats</div>
+      <div class="heat-subtitle">Total count by section</div>
+
+      <div class="heat-row">
+  `;
+
+  sectionNames.forEach(section => {
+    const value = fungusData[section]["Fungus Gnats"] || 0;
+    const heatClass = getHeatClass(value, maxFG);
+
+    html += `
+      <div class="heat-cell ${heatClass}">
+        <strong>${value}</strong>
+        <span>${section}</span>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+
+    <div class="heat-card">
+      <div class="heat-title">Thrips</div>
+      <div class="heat-subtitle">Hot spots by bay — Threshold ≥ 15</div>
+
+      <div class="hotspot-strip">
+  `;
+
+  if (thrips.length === 0) {
+    html += `<p>No thrips hotspots this week.</p>`;
+  }
+
+  thrips.forEach(item => {
+    html += `
+      <div class="hotspot-block thrips-block">
+        <strong>${item.count}</strong>
+        <span>${item.label}</span>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+
+    <div class="heat-card">
+      <div class="heat-title">Aphids</div>
+      <div class="heat-subtitle">Hot spots by bay — Threshold ≥ 5</div>
+
+      <div class="hotspot-strip">
+  `;
+
+  if (aphids.length === 0) {
+    html += `<p>No aphid hotspots this week.</p>`;
+  }
+
+  aphids.forEach(item => {
+    html += `
+      <div class="hotspot-block aphids-block">
+        <strong>${item.count}</strong>
+        <span>${item.label}</span>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  document.getElementById("heatmapsPage").innerHTML = html;
+}
 
 
 
