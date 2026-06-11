@@ -228,24 +228,27 @@ function showPage(page) {
     renderSections();
   }
 
-  if (page === "dashboard") {
+if (page === "dashboard") {
   document.getElementById("dashboardPage").style.display = "block";
   document.querySelectorAll(".nav-link")[1].classList.add("active");
   updateBottomBar("sections");
+  showScoutNameOnly();
   loadDashboard();
 }
 
-  if (page === "heatmaps") {
-    document.getElementById("heatmapsPage").style.display = "block";
-    document.querySelectorAll(".nav-link")[2].classList.add("active");
-    updateBottomBar("sections");
-  }
+if (page === "heatmaps") {
+  document.getElementById("heatmapsPage").style.display = "block";
+  document.querySelectorAll(".nav-link")[2].classList.add("active");
+  updateBottomBar("sections");
+  showScoutNameOnly();
+}
 
-  if (page === "reports") {
-    document.getElementById("reportsPage").style.display = "block";
-    document.querySelectorAll(".nav-link")[3].classList.add("active");
-    updateBottomBar("sections");
-  }
+if (page === "reports") {
+  document.getElementById("reportsPage").style.display = "block";
+  document.querySelectorAll(".nav-link")[3].classList.add("active");
+  updateBottomBar("sections");
+  showScoutNameOnly();
+}
 }
 
 loadStatus();
