@@ -51,6 +51,7 @@ h1{
   margin-top:0;
   color:#065f46;
   font-size:34px;
+  letter-spacing:0.8px;
 }
 
 #weekDisplay{
@@ -58,7 +59,8 @@ h1{
   font-weight:700;
   font-size:18px;
   color:#475569;
-  margin-bottom:4px;
+  margin-top:4px;
+  margin-bottom:14px;
 }
 
 .user-box{
