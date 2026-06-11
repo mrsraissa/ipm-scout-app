@@ -206,14 +206,38 @@ textarea{
 /* Mobile */
 @media(max-width:800px){
 
+  .layout{
+    display:block;
+  }
+
   .sidebar{
-    padding:6px 8px;
-    gap:5px;
+    width:100%;
+    height:auto;
+    display:flex;
+    flex-direction:row;
+    gap:6px;
+    overflow-x:auto;
+    align-items:center;
+    padding:8px 10px;
+    box-sizing:border-box;
+  }
+
+  .sidebar h2{
+    display:none;
   }
 
   .nav-link{
-    font-size:13px;
-    padding:8px 9px;
+    margin-top:0;
+    white-space:nowrap;
+    padding:9px 11px;
+    font-size:14px;
+    border-radius:12px;
+  }
+
+  .container{
+    width:100%;
+    padding:8px;
+    box-sizing:border-box;
   }
 
   h1{
@@ -236,16 +260,42 @@ textarea{
     border-radius:20px;
   }
 
-  #entryContainer h2{
-    font-size:26px;
-    margin:4px 0 8px;
+  .grid{
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+  }
+
+  .btn{
+    padding:10px 6px;
+    font-size:21px;
+    min-height:56px;
+  }
+
+  .section-grid .btn:last-child{
+    grid-column:2;
+  }
+
+  .back-btn{
+    padding:6px 10px;
+    font-size:15px;
+    margin-bottom:4px;
+  }
+
+  #entryContainer h2,
+  #bayContainer h2{
+    font-size:24px;
+    margin:4px 0 6px;
+  }
+
+  .section-percent{
+    font-size:18px;
+    margin-bottom:22px;
   }
 
   .entry-row{
-    min-height:28px;
-    padding:3px 8px;
-    margin-bottom:3px;
-    border-radius:12px;
+    min-height:30px;
+    padding:4px 8px;
+    margin-bottom:4px;
   }
 
   .entry-row label{
@@ -254,28 +304,21 @@ textarea{
 
   .entry-row input{
     width:68px;
-    height:28px;
+    height:30px;
     font-size:20px;
     padding:0;
   }
 
   textarea{
-    min-height:30px;
+    min-height:34px;
     font-size:14px;
-    padding:5px 8px;
+    padding:6px;
   }
 
   .save-btn,
   .empty-btn{
-    padding:7px;
+    padding:8px;
     font-size:18px;
     margin-top:5px;
-    border-radius:14px;
-  }
-
-  .back-btn{
-    padding:6px 10px;
-    font-size:15px;
-    margin-bottom:4px;
   }
 }
