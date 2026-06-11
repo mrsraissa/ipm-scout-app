@@ -17,24 +17,40 @@
 
 <div class="layout">
   <aside class="sidebar">
-    <h2>SCG IPM</h2>
-    <a class="nav-link">Scout</a>
-        <a class="nav-link">Dashboard</a>
-    <a class="nav-link">Heat Maps</a>
-    <a class="nav-link">Reports</a>
+    <h2>IPM Scout</h2>
+    <a class="nav-link active" onclick="showPage('scout')">Scout</a>
+<a class="nav-link" onclick="showPage('dashboard')">Dashboard</a>
+<a class="nav-link" onclick="showPage('heatmaps')">Heat Maps</a>
+<a class="nav-link" onclick="showPage('reports')">Reports</a>
   </aside>
 
   <main class="container">
-    <h1>SCG IPM Scout</h1>
+    <h1> IPM Scout</h1>
     <div id="weekDisplay">Loading week...</div>
     <div id="currentScout"></div>
 
     
 
-    <div class="card">
-      <div id="sectionContainer"></div>
-      <div id="bayContainer"></div>
-      <div id="entryContainer"></div>
+   <div id="scoutPage" class="card">
+  <div id="sectionContainer"></div>
+  <div id="bayContainer"></div>
+  <div id="entryContainer"></div>
+</div>
+
+<div id="dashboardPage" class="card page hidden-page">
+  <h2>Dashboard</h2>
+  <p>Dashboard coming next.</p>
+</div>
+
+<div id="heatmapsPage" class="card page hidden-page">
+  <h2>Heat Maps</h2>
+  <p>Heat maps coming later.</p>
+</div>
+
+<div id="reportsPage" class="card page hidden-page">
+  <h2>Reports</h2>
+  <p>Reports coming later.</p>
+</div>
     </div>
 
    <footer id="bottomBar" class="bottom-bar hidden">
@@ -76,7 +92,40 @@ let weekStatus = {};
 let currentWeek = "";
   let currentScout =
   localStorage.getItem("currentScout") || "";
+function showPage(page) {
+  document.getElementById("scoutPage").style.display = "none";
+  document.getElementById("dashboardPage").style.display = "none";
+  document.getElementById("heatmapsPage").style.display = "none";
+  document.getElementById("reportsPage").style.display = "none";
 
+  document.querySelectorAll(".nav-link").forEach(link => {
+    link.classList.remove("active");
+  });
+
+  if (page === "scout") {
+    document.getElementById("scoutPage").style.display = "block";
+    document.querySelectorAll(".nav-link")[0].classList.add("active");
+    renderSections();
+  }
+
+  if (page === "dashboard") {
+    document.getElementById("dashboardPage").style.display = "block";
+    document.querySelectorAll(".nav-link")[1].classList.add("active");
+    updateBottomBar("sections");
+  }
+
+  if (page === "heatmaps") {
+    document.getElementById("heatmapsPage").style.display = "block";
+    document.querySelectorAll(".nav-link")[2].classList.add("active");
+    updateBottomBar("sections");
+  }
+
+  if (page === "reports") {
+    document.getElementById("reportsPage").style.display = "block";
+    document.querySelectorAll(".nav-link")[3].classList.add("active");
+    updateBottomBar("sections");
+  }
+}
 
 loadStatus();
 
