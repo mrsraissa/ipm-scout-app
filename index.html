@@ -238,26 +238,29 @@ function showEntry(bay, entryData = null) {
   document.getElementById("bayContainer").innerHTML = "";
 
   let html = `
-        <h2>${selectedSection} - ${selectedBay}</h2>
+    <h2>${selectedSection} - ${selectedBay}</h2>
   `;
 
   pests.forEach(pest => {
-  const savedValue = entryData && entryData.counts[pest] !== "" ? entryData.counts[pest] : "";
+    const savedValue =
+      entryData && entryData.counts[pest] !== ""
+        ? entryData.counts[pest]
+        : "";
 
-  html += `
-    <div class="entry-row">
-      <label>${pest}</label>
-      <input type="number" min="0" placeholder="0" value="${savedValue}" data-pest="${pest}">
-    </div>
-  `;
-});
+    html += `
+      <div class="entry-row">
+        <label>${pest}</label>
+        <input type="number" min="0" placeholder="0" value="${savedValue}" data-pest="${pest}">
+      </div>
+    `;
+  });
 
   const savedNotes = entryData ? entryData.notes || "" : "";
-const lastUpdated = entryData && entryData.lastUpdated
-  ? new Date(entryData.lastUpdated).toLocaleString()
-  : "";
+  const lastUpdated = entryData && entryData.lastUpdated
+    ? new Date(entryData.lastUpdated).toLocaleString()
+    : "";
 
-html += `
+  html += `
     <label><strong>Notes</strong></label>
     <textarea id="notes" placeholder="Crop, location, treatment, beneficials...">${savedNotes}</textarea>
 
@@ -268,6 +271,9 @@ html += `
 
     <div id="message" class="message"></div>
   `;
+
+  document.getElementById("entryContainer").innerHTML = html;
+}
 
 function sendToSheet(params) {
   const formData = new URLSearchParams();
