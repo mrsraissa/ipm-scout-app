@@ -150,81 +150,65 @@ function getHeatCellClass(value, pest) {
   return "map-empty";
 }
 
-function renderPestGrid(title, pest, threshold, bayCounts) {
-  let activeBays = [];
+function renderPestStrip(title, pest, threshold, bayCounts) {
+  let hotspots = [];
 
   Object.keys(bayCounts).forEach(section => {
     Object.keys(bayCounts[section]).forEach(bay => {
       const bayData = bayCounts[section][bay] || {};
+      const value = Number(bayData[pest] || 0);
 
-      const value =
-        Number(bayData[pest] || 0) ||
-        Number(bayData[pest.toLowerCase()] || 0) ||
-        Number(bayData[pest.replace(" ", "")] || 0);
-
-      if (value >= threshold && !activeBays.includes(bay)) {
-        activeBays.push(bay);
+      if (value >= threshold) {
+        hotspots.push({
+          label: section + " " + bay,
+          value: value
+        });
       }
     });
   });
 
-  activeBays.sort((a, b) => {
-    return Number(a.replace(/\D/g, "")) - Number(b.replace(/\D/g, ""));
+  hotspots.sort((a, b) => {
+    const sectionA = a.label.split(" ")[0];
+    const sectionB = b.label.split(" ")[0];
+
+    const sectionIndexA = sectionOrder.indexOf(sectionA);
+    const sectionIndexB = sectionOrder.indexOf(sectionB);
+
+    if (sectionIndexA !== sectionIndexB) {
+      return sectionIndexA - sectionIndexB;
+    }
+
+    return a.label.localeCompare(b.label, undefined, { numeric: true });
   });
 
   let html = `
-    <div class="heat-card">
+    <div class="heat-card strip-card">
       <div class="heat-title">${title}</div>
-      <div class="heat-subtitle">Hot spots by bay — Threshold ≥ ${threshold}</div>
+      <div class="heat-subtitle">Hot Spots by Bay — Threshold ≥ ${threshold}</div>
 
-      <div class="map-scroll">
-        <table class="heat-map-table">
-          <tr>
-            <th>Bay</th>
+      <div class="strip-scroll">
+        <div class="heat-strip">
   `;
 
-  sectionOrder.forEach(section => {
-    html += `<th>${section}</th>`;
-  });
-
-  html += `</tr>`;
-
-  activeBays.forEach(bay => {
-    html += `<tr><td class="bay-label">${bay}</td>`;
-
-    sectionOrder.forEach(section => {
-      const bayData =
-        bayCounts[section] && bayCounts[section][bay]
-          ? bayCounts[section][bay]
-          : {};
-
-      const value =
-        Number(bayData[pest] || 0) ||
-        Number(bayData[pest.toLowerCase()] || 0) ||
-        Number(bayData[pest.replace(" ", "")] || 0);
-
-      if (value >= threshold) {
-        html += `<td class="${getHeatCellClass(value, pest)}">${value}</td>`;
-      } else {
-        html += `<td class="map-empty"></td>`;
-      }
-    });
-
-    html += `</tr>`;
-  });
-
-  if (activeBays.length === 0) {
+  if (hotspots.length === 0) {
     html += `
-      <tr>
-        <td colspan="${sectionOrder.length + 1}" class="no-hotspots">
-          No hotspots above threshold this week.
-        </td>
-      </tr>
+      <div class="no-hotspots">
+        No hotspots above threshold this week.
+      </div>
     `;
   }
 
+  hotspots.forEach(item => {
+    html += `
+      <div class="strip-cell ${getHeatCellClass(item.value, pest)}">
+        <strong>${item.value}</strong>
+        <span>${item.label}</span>
+      </div>
+    `;
+  });
+
   html += `
-        </table>
+        </div>
       </div>
     </div>
   `;
@@ -281,8 +265,8 @@ function renderHeatMaps(data) {
       </div>
   `;
 
-  html += renderPestGrid("Thrips", "Thrips", 15, bayCounts);
-  html += renderPestGrid("Aphids", "Aphids", 5, bayCounts);
+html += renderPestStrip("Thrips", "Thrips", 15, bayCounts);
+html += renderPestStrip("Aphids", "Aphids", 5, bayCounts);
 
   html += `
     </div>
