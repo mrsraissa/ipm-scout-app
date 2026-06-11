@@ -130,16 +130,25 @@ function renderDashboard(data) {
   <div class="dashboard-card">
     <h3>Section Completion</h3>
 `;
-
 Object.keys(sectionData).forEach(section => {
+  const p = sectionData[section].pests;
+
+  const total =
+    p["Thrips"] +
+    p["Aphids"] +
+    p["Whiteflies"] +
+    p["Fungus Gnats"];
+
+  if (total === 0) return;
+
   html += `
-    <div class="section-row">
-      <span>${section}</span>
-      <div class="small-progress">
-        <div class="small-fill" style="width:${sectionData[section].progress}%"></div>
-      </div>
-      <strong>${sectionData[section].progress}%</strong>
-    </div>
+    <tr>
+      <td>${section}</td>
+      <td>${p["Thrips"]}</td>
+      <td>${p["Aphids"]}</td>
+      <td>${p["Whiteflies"]}</td>
+      <td>${p["Fungus Gnats"]}</td>
+    </tr>
   `;
 });
 
@@ -173,7 +182,7 @@ html += `
   </div>
 
   <div class="dashboard-card">
-    <h3>Pest Counts by Section</h3>
+   <h3>Sections With Pest Activity</h3>
 
     <table class="pest-table">
       <tr>
