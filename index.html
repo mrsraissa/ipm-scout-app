@@ -612,7 +612,17 @@ function getHeatClass(value, max) {
 
   return "heat-low";
 }
+function getHeatColor(value, min, max) {
+  if (max === min) return "#f8e9a8";
 
+  const pct = (value - min) / (max - min);
+
+  if (pct < 0.25) return "#f8e9a8";
+  if (pct < 0.50) return "#f3c15c";
+  if (pct < 0.75) return "#e9782f";
+
+  return "#c40000";
+}
 function getHeatCellClass(value, pest) {
   if (pest === "Thrips") {
     if (value >= 40) return "map-red";
@@ -747,7 +757,10 @@ function renderExportStrip(title, subtitle, items, pest, perRow = 10) {
 
       row.forEach(item => {
         html += `
-          <div class="export-strip-cell ${getHeatCellClass(item.count, pest)}">
+          <div
+  class="export-strip-cell"
+  style="background:${getHeatColor(item.count, 0, Math.max(...items.map(x => x.count)))}; color:${item.count >= Math.max(...items.map(x => x.count)) * 0.75 ? 'white' : '#111827'};"
+>
             <strong>${item.count}</strong>
             <span>${item.label}</span>
           </div>
@@ -801,7 +814,18 @@ function renderHeatMaps(data) {
         ? fungusData[section]["Fungus Gnats"]
         : 0;
 
-    const heatClass = getHeatClass(value, maxFG);
+    const color = getHeatColor(value, 0, maxFG);
+
+const textColor =
+  value >= maxFG * 0.75
+    ? "white"
+    : "#111827";
+
+html += `
+  <div
+    class="export-strip-cell"
+    style="background:${color};color:${textColor};"
+  >
 
     html += `
       <div class="heat-cell ${heatClass}">
