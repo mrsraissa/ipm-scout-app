@@ -395,13 +395,13 @@ textarea{
 }
 
 .heat-low{ background:#fff3c4; color:#111827; }
-.heat-mid{ background:#facc15; color:#111827; }
-.heat-high{ background:#9bb43a; color:#111827; }
+.heat-mid{ background:#f4d35e; color:#111827; }
+.heat-high{ background:#b7bf4b; color:#111827; }
 .heat-very-high{ background:#3f7d20; color:white; }
 
-.map-green{ background:#f7dc83; color:#111827; }
-.map-yellow{ background:#f2b24b; color:#111827; }
-.map-orange{ background:#e47a2e; color:#111827; }
+.map-green{ background:#f7e6a1; color:#111827; }
+.map-yellow{ background:#f3c15c; color:#111827; }
+.map-orange{ background:#e9782f; color:#111827; }
 .map-red{ background:#c40000; color:white; }
 
 .hotspot-wrap{
@@ -456,7 +456,7 @@ textarea{
   display:flex;
   width:100%;
   border:2px solid #475569;
-  margin-bottom:54px;
+  margin-bottom:68px;
 }
 
 .export-strip-cell{
@@ -482,7 +482,7 @@ textarea{
 
 .export-strip-cell span{
   position:absolute;
-  top:86px;
+  top:92px;
   font-size:18px;
   color:#111827;
   transform:rotate(-25deg);
