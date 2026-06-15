@@ -455,7 +455,9 @@ textarea{
 .export-strip-row{
   display:flex;
   width:100%;
-  border:1.5px solid #475569;
+  border:1px solid #94a3b8;
+  border-radius:10px;
+  overflow:hidden;
   margin-bottom:52px;
 }
 
@@ -469,7 +471,7 @@ textarea{
   align-items:center;
   position:relative;
   font-weight:900;
-  border-right:1px solid rgba(0,0,0,0.12);
+  border-right:1px solid rgba(0,0,0,0.08);
 }
 
 .export-strip-cell:last-child{
