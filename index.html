@@ -714,7 +714,54 @@ function renderExportHotspotCells(title, threshold, hotspotList, pest) {
   return hotspots;
 }
 
-  
+function chunkArray(array, size) {
+  const chunks = [];
+
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+
+  return chunks;
+}
+
+function renderExportStrip(title, subtitle, items, pest, perRow = 10) {
+  let html = `
+    <div class="export-strip-section">
+      <div class="export-strip-title">
+        <span>${title}</span>
+        <em>${subtitle}</em>
+      </div>
+  `;
+
+  if (!items || items.length === 0) {
+    html += `
+      <div class="export-strip-row">
+        <div class="export-no-hotspots">No hotspots above threshold this week.</div>
+      </div>
+    `;
+  } else {
+    const rows = chunkArray(items, perRow);
+
+    rows.forEach(row => {
+      html += `<div class="export-strip-row">`;
+
+      row.forEach(item => {
+        html += `
+          <div class="export-strip-cell ${getHeatCellClass(item.count, pest)}">
+            <strong>${item.count}</strong>
+            <span>${item.label}</span>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+    });
+  }
+
+  html += `</div>`;
+  return html;
+}
+
 function renderHeatMaps(data) {
   if (!data || !data.success) {
     document.getElementById("heatmapsPage").innerHTML =
@@ -724,11 +771,12 @@ function renderHeatMaps(data) {
 
   const fungusData = data.fungusGnatsBySection || {};
   const bayCounts = data.bayCounts || {};
-const thripsHotspots =
-  data.thripsHotspots || buildHotspotsFromBayCounts(bayCounts, "Thrips", 15);
 
-const aphidsHotspots =
-  data.aphidsHotspots || buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
+  const thripsHotspots =
+    data.thripsHotspots || buildHotspotsFromBayCounts(bayCounts, "Thrips", 15);
+
+  const aphidsHotspots =
+    data.aphidsHotspots || buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
 
   const sectionNames = Object.keys(fungusData);
   const maxFG = Math.max(
@@ -768,17 +816,20 @@ const aphidsHotspots =
     </div>
   `;
 
-  html += renderSummaryHotspots("Thrips Hotspots", 15, thripsHotspots);
-  html += renderSummaryHotspots("Aphids Hotspots", 5, aphidsHotspots);
+  html += renderSummaryHotspots("Thrips Hotspots", 15, thripsHotspots, "Thrips");
+  html += renderSummaryHotspots("Aphids Hotspots", 5, aphidsHotspots, "Aphids");
 
   html += `
-    <div id="heatMapExport" style="position:absolute; left:-99999px; top:0; width:1400px;">
-      <h2>Week ${data.week} Heat Maps</h2>
+    <div id="heatMapExport" style="position:absolute; left:-99999px; top:0; width:1500px;">
+      <h2 class="export-main-title">Week ${data.week} Heat Maps</h2>
 
-      <div class="heat-card">
-        <div class="heat-title">Fungus Gnats</div>
-        <div class="heat-subtitle">Total count by section</div>
-        <div class="heat-row">
+      <div class="export-strip-section">
+        <div class="export-strip-title">
+          <span>Fungus Gnats</span>
+          <em>Total count by section</em>
+        </div>
+
+        <div class="export-strip-row">
   `;
 
   sectionOrder.forEach(section => {
@@ -790,7 +841,7 @@ const aphidsHotspots =
     const heatClass = getHeatClass(value, maxFG);
 
     html += `
-      <div class="heat-cell ${heatClass}">
+      <div class="export-strip-cell ${heatClass}">
         <strong>${value}</strong>
         <span>${section}</span>
       </div>
@@ -802,8 +853,21 @@ const aphidsHotspots =
       </div>
   `;
 
-  html += renderExportHotspotCells("Thrips", 15, thripsHotspots, "Thrips");
-  html += renderExportHotspotCells("Aphids", 5, aphidsHotspots, "Aphids");
+  html += renderExportStrip(
+    "Thrips",
+    "Hot Spots by Bay (Threshold ≥ 15)",
+    thripsHotspots,
+    "Thrips",
+    10
+  );
+
+  html += renderExportStrip(
+    "Aphids",
+    "Hot Spots by Bay (Threshold ≥ 5)",
+    aphidsHotspots,
+    "Aphids",
+    10
+  );
 
   html += `
     </div>
