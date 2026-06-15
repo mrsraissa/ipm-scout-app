@@ -630,22 +630,28 @@ function getFungusColor(v) {
 }
 
 function getAphidColor(v) {
-  if (v >= 80) return "#08306B";
-  if (v >= 60) return "#08519C";
-  if (v >= 40) return "#2171B5";
-  if (v >= 25) return "#4292C6";
-  if (v >= 15) return "#6BAED6";
-  if (v >= 10) return "#9ECAE1";
-  if (v >= 5)  return "#C6DBEF";
-  return "#F7FBFF";
+  if (v >= 80) return "#4A148C";
+  if (v >= 60) return "#6A1B9A";
+  if (v >= 40) return "#8E24AA";
+  if (v >= 25) return "#AB47BC";
+  if (v >= 15) return "#BA68C8";
+  if (v >= 10) return "#CE93D8";
+  if (v >= 5)  return "#E1BEE7";
+  return "#F3E5F5";
 }
 
 function getTextColor(backgroundColor) {
-  const darkColors = [
-   "#7A0019", "#A1122A", "#C43A3A",
-    "#7F0000", "#A30000", "#C40000",
-    "#1B5E20", "#2E7D32", "#3E8E41"
-  ];
+const darkColors = [
+  "#4A148C",
+  "#6A1B9A",
+  "#8E24AA",
+  "#7F0000",
+  "#A30000",
+  "#C40000",
+  "#1B5E20",
+  "#2E7D32",
+  "#3E8E41"
+];
 
   return darkColors.includes(backgroundColor) ? "white" : "#111827";
 }
