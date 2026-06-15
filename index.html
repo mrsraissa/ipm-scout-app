@@ -692,6 +692,29 @@ function renderExportHotspotCells(title, threshold, hotspotList, pest) {
   return html;
 }
 
+  function buildHotspotsFromBayCounts(bayCounts, pest, threshold) {
+  const hotspots = [];
+
+  Object.keys(bayCounts || {}).forEach(section => {
+    Object.keys(bayCounts[section] || {}).forEach(bay => {
+      const bayData = bayCounts[section][bay] || {};
+      const value = Number(bayData[pest] || 0);
+
+      if (value >= threshold) {
+        hotspots.push({
+          label: section + " " + bay,
+          count: value
+        });
+      }
+    });
+  });
+
+  hotspots.sort((a, b) => b.count - a.count);
+
+  return hotspots;
+}
+
+  
 function renderHeatMaps(data) {
   if (!data || !data.success) {
     document.getElementById("heatmapsPage").innerHTML =
@@ -700,8 +723,12 @@ function renderHeatMaps(data) {
   }
 
   const fungusData = data.fungusGnatsBySection || {};
-  const thripsHotspots = data.thripsHotspots || [];
-  const aphidsHotspots = data.aphidsHotspots || [];
+  const bayCounts = data.bayCounts || {};
+const thripsHotspots =
+  data.thripsHotspots || buildHotspotsFromBayCounts(bayCounts, "Thrips", 15);
+
+const aphidsHotspots =
+  data.aphidsHotspots || buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
 
   const sectionNames = Object.keys(fungusData);
   const maxFG = Math.max(
