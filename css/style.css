@@ -475,15 +475,14 @@ textarea{
 .export-strip-cell:last-child{
   border-right:none;
 }
-
 .export-strip-cell strong{
-  font-size:26px;
+  font-size:30px;
 }
 
 .export-strip-cell span{
   position:absolute;
   top:92px;
-  font-size:18px;
+  font-size:20px;
   color:#111827;
   transform:rotate(-25deg);
   white-space:nowrap;
