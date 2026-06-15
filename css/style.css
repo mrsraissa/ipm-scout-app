@@ -685,4 +685,75 @@ textarea{
   margin-top:4px !important;
   white-space:nowrap !important;
 }
+.export-main-title{
+  text-align:center;
+  font-size:32px;
+  color:#064e3b;
+  margin:0 0 28px;
+}
+
+.export-strip-section{
+  margin-bottom:30px;
+}
+
+.export-strip-title{
+  display:flex;
+  align-items:center;
+  gap:26px;
+  margin-bottom:10px;
+}
+
+.export-strip-title span{
+  font-size:30px;
+  font-weight:900;
+  color:#064e3b;
+  text-transform:uppercase;
+}
+
+.export-strip-title em{
+  font-size:23px;
+  color:#8b8b8b;
+  font-style:normal;
+}
+
+.export-strip-row{
+  display:grid;
+  grid-template-columns:repeat(10, 1fr);
+  width:100%;
+  border:2px solid #475569;
+  margin-bottom:42px;
+}
+
+.export-strip-cell{
+  height:70px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  font-weight:900;
+  border-right:1px solid rgba(0,0,0,0.12);
+  position:relative;
+}
+
+.export-strip-cell strong{
+  font-size:22px;
+}
+
+.export-strip-cell span{
+  position:absolute;
+  top:76px;
+  font-size:16px;
+  color:#111827;
+  transform:rotate(-25deg);
+  white-space:nowrap;
+}
+
+.export-no-hotspots{
+  grid-column:1 / -1;
+  padding:18px;
+  font-weight:800;
+  color:#64748b;
+  font-style:italic;
+}
+  
 }
