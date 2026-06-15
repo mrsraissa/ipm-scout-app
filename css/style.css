@@ -422,14 +422,14 @@ textarea{
 
 .export-main-title{
   text-align:center;
-  font-size:34px;
+  font-size:30px;
   font-weight:900;
   color:#064e3b;
   margin:0 0 30px;
 }
 
 .export-strip-section{
-  margin-bottom:52px;
+  margin-bottom:80px;
 }
 
 .export-strip-title{
@@ -447,7 +447,7 @@ textarea{
 }
 
 .export-strip-title em{
-  font-size:24px;
+  font-size:20px;
   color:#7c7c7c;
   font-style:normal;
 }
@@ -463,7 +463,7 @@ textarea{
 
 .export-strip-cell{
   flex:1;
-  height:72px;
+  height:78px;
   min-width:0;
   display:flex;
   flex-direction:column;
@@ -484,7 +484,7 @@ textarea{
 
 .export-strip-cell span{
   position:absolute;
-  top:84px;
+  top:92px;
   font-size:17px;
   font-weight:400;
   color:#374151;
