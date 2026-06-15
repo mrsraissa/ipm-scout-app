@@ -668,7 +668,7 @@ function buildHotspotsFromBayCounts(bayCounts, pest, threshold) {
 
       if (value >= threshold) {
         hotspots.push({
-          label: section + " " + bay,
+          label: section + bay,
           count: value
         });
       }
@@ -872,7 +872,7 @@ function renderHeatMaps(data) {
 
   html += renderExportStrip(
     "Thrips",
-    "Hot Spots by Bay (Threshold ≥ 15)",
+    "Bays Above Threshold (≥15)"
     thripsHotspots,
     "Thrips",
     10
@@ -880,7 +880,7 @@ function renderHeatMaps(data) {
 
   html += renderExportStrip(
     "Aphids",
-    "Hot Spots by Bay (Threshold ≥ 5)",
+    "Bays Above Threshold (≥5)"
     aphidsHotspots,
     "Aphids",
     10
