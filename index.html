@@ -9,10 +9,9 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=113">
+  <link rel="stylesheet" href="css/style.css?v=137">
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
-
 
 <body>
 
@@ -20,45 +19,38 @@
   <aside class="sidebar">
     <h2>IPM Scout</h2>
     <a class="nav-link active" onclick="showPage('scout')">Scout</a>
-<a class="nav-link" onclick="showPage('dashboard')">Dashboard</a>
-<a class="nav-link" onclick="showPage('heatmaps')">Heat Maps</a>
-<a class="nav-link" onclick="showPage('reports')">Reports</a>
+    <a class="nav-link" onclick="showPage('dashboard')">Dashboard</a>
+    <a class="nav-link" onclick="showPage('heatmaps')">Heat Maps</a>
+    <a class="nav-link" onclick="showPage('reports')">Reports</a>
   </aside>
 
   <main class="container">
-    <h1> IPM Scout</h1>
+    <h1>IPM Scout</h1>
     <div id="weekDisplay">Loading week...</div>
     <div id="currentScout"></div>
 
-    
-
-   <div id="scoutPage" class="card">
-  <div id="sectionContainer"></div>
-  <div id="bayContainer"></div>
-  <div id="entryContainer"></div>
-</div>
-    
-<div id="dashboardPage" class="card page hidden-page">
-</div>
-
-<div id="heatmapsPage" class="card page hidden-page">
-  <h2>Heat Maps</h2>
-  <p>Heat maps coming later.</p>
-</div>
-
-<div id="reportsPage" class="card page hidden-page">
-  <h2>Reports</h2>
-  <p>Reports coming later.</p>
-</div>
+    <div id="scoutPage" class="card">
+      <div id="sectionContainer"></div>
+      <div id="bayContainer"></div>
+      <div id="entryContainer"></div>
     </div>
 
-   <footer id="bottomBar" class="bottom-bar hidden">
-  <button id="bottomSectionsBtn"
-        onclick="goToSections()">⌂ Sections</button>
+    <div id="dashboardPage" class="card page hidden-page"></div>
 
-<button id="bottomBaysBtn"
-        onclick="goToBays()">◀ Bays</button>
-</footer>
+    <div id="heatmapsPage" class="card page hidden-page">
+      <h2>Heat Maps</h2>
+      <p>Heat maps coming later.</p>
+    </div>
+
+    <div id="reportsPage" class="card page hidden-page">
+      <h2>Reports</h2>
+      <p>Reports coming later.</p>
+    </div>
+
+    <footer id="bottomBar" class="bottom-bar hidden">
+      <button id="bottomSectionsBtn" onclick="goToSections()">⌂ Sections</button>
+      <button id="bottomBaysBtn" onclick="goToBays()">◀ Bays</button>
+    </footer>
   </main>
 </div>
 
@@ -89,10 +81,39 @@ let selectedSection = "";
 let selectedBay = "";
 let weekStatus = {};
 let currentWeek = "";
-  let currentScout =
-  localStorage.getItem("currentScout") || "";
+let currentScout = localStorage.getItem("currentScout") || "";
 
-  function loadDashboard() {
+loadStatus();
+
+function loadStatus() {
+  const callbackName = "statusCallback_" + Date.now();
+
+  window[callbackName] = function(data) {
+    if (data.success) {
+      weekStatus = data.records || {};
+      currentWeek = data.week || "";
+
+      document.getElementById("weekDisplay").innerHTML =
+        currentWeek ? "Week " + currentWeek : "";
+
+      if (currentScout) {
+        showScoutWithPencil();
+        renderSections();
+      } else {
+        selectScout();
+      }
+    }
+
+    delete window[callbackName];
+    script.remove();
+  };
+
+  const script = document.createElement("script");
+  script.src = API_URL + "?action=getStatus&callback=" + callbackName;
+  document.body.appendChild(script);
+}
+
+function loadDashboard() {
   const callbackName = "dashboardCallback_" + Date.now();
 
   window[callbackName] = function(data) {
@@ -106,6 +127,7 @@ let currentWeek = "";
   script.src = API_URL + "?action=getDashboard&callback=" + callbackName;
   document.body.appendChild(script);
 }
+
 function loadHeatMaps() {
   const callbackName = "heatMapCallback_" + Date.now();
 
@@ -120,261 +142,7 @@ function loadHeatMaps() {
   script.src = API_URL + "?action=getHeatMaps&callback=" + callbackName;
   document.body.appendChild(script);
 }
-function getHeatClass(value, max) {
-  if (max === 0) return "heat-low";
 
-  const pct = value / max;
-
-  if (pct >= 0.75) return "heat-very-high";
-  if (pct >= 0.50) return "heat-high";
-  if (pct >= 0.25) return "heat-mid";
-
-  return "heat-low";
-}
-
-function getHeatCellClass(value, pest) {
-  if (pest === "Thrips") {
-    if (value >= 40) return "map-red";
-    if (value >= 30) return "map-orange";
-    if (value >= 20) return "map-yellow";
-    if (value >= 15) return "map-green";
-  }
-
-  if (pest === "Aphids") {
-    if (value >= 20) return "map-red";
-    if (value >= 15) return "map-orange";
-    if (value >= 10) return "map-yellow";
-    if (value >= 5) return "map-green";
-  }
-
-  return "map-empty";
-}
-function renderHotspotStrip(title, threshold, hotspotList, pest) {
-  let html = `
-    <div class="heat-card">
-      <div class="heat-title">${title}</div>
-      <div class="heat-subtitle">Hot Spots by Bay — Threshold ≥ ${threshold}</div>
-
-      <div class="hotspot-wrap">
-  `;
-
-  if (!hotspotList || hotspotList.length === 0) {
-    html += `
-      <div class="no-hotspots">
-        No hotspots above threshold this week.
-      </div>
-    `;
-  }
-
-  hotspotList.forEach(item => {
-    html += `
-      <div class="hotspot-cell ${getHeatCellClass(item.count, pest)}">
-        <strong>${item.count}</strong>
-        <span>${item.label}</span>
-      </div>
-    `;
-  });
-
-  html += `
-      </div>
-    </div>
-  `;
-
-  return html;
-}
-
-function renderHeatMaps(data) {
-  if (!data || !data.success) {
-    document.getElementById("heatmapsPage").innerHTML =
-      "<h2>Heat Maps</h2><p>Could not load heat map data.</p>";
-    return;
-  }
-
-  const fungusData = data.fungusGnatsBySection || {};
-  const bayCounts = data.bayCounts || data.bayData || data.countsByBay || {};
-
-  const sectionNames = Object.keys(fungusData);
-  const maxFG = Math.max(
-    ...sectionNames.map(section => fungusData[section]["Fungus Gnats"] || 0),
-    0
-  );
-
-  let html = `
-    <button class="download-btn" onclick="downloadHeatMap()">Download PNG</button>
-
-    <div id="heatMapExport">
-      <h2>Week ${data.week} Heat Maps</h2>
-
-      <div class="heat-card">
-        <div class="heat-title">Fungus Gnats</div>
-        <div class="heat-subtitle">Total count by section</div>
-
-        <div class="heat-row">
-  `;
-
-  sectionOrder.forEach(section => {
-    const value =
-      fungusData[section] && fungusData[section]["Fungus Gnats"]
-        ? fungusData[section]["Fungus Gnats"]
-        : 0;
-
-    const heatClass = getHeatClass(value, maxFG);
-
-    html += `
-      <div class="heat-cell ${heatClass}">
-        <strong>${value}</strong>
-        <span>${section}</span>
-      </div>
-    `;
-  });
-
-  html += `
-        </div>
-      </div>
-  `;
-
-html += renderHotspotStrip("Thrips", 15, data.thripsHotspots, "Thrips");
-html += renderHotspotStrip("Aphids", 5, data.aphidsHotspots, "Aphids");
-
-  html += `
-    </div>
-  `;
-
-  document.getElementById("heatmapsPage").innerHTML = html;
-}
-  
-function downloadHeatMap() {
-  const element = document.getElementById("heatMapExport");
-
-  html2canvas(element, {
-    backgroundColor: "#ffffff",
-    scale: 2
-  }).then(canvas => {
-    const link = document.createElement("a");
-    link.download = "IPM_Heat_Map.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  });
-}
-
-
-
-
-  
-function renderDashboard(data) {
-  if (!data || !data.success) {
-    document.getElementById("dashboardPage").innerHTML =
-      "<h2>Dashboard</h2><p>Could not load dashboard data.</p>";
-    return;
-  }
-
-  const sectionData = data.sectionData;
-  const hotspots = data.hotspots;
-
-let html = `
-  <h2>Dashboard</h2>
-
-  <div class="dashboard-card">
-    <div class="dashboard-title">Week ${data.week}</div>
-    <div class="dashboard-percent">${data.progress}% Complete</div>
-    <div class="progress-bar">
-      <div class="progress-fill" style="width:${data.progress}%"></div>
-    </div>
-  </div>
-
-  <div class="dashboard-card">
-    <h3>Section Completion</h3>
-`;
-
-Object.keys(sectionData).forEach(section => {
-  html += `
-    <div class="section-row">
-      <span>${section}</span>
-      <div class="small-progress">
-        <div class="small-fill" style="width:${sectionData[section].progress}%"></div>
-      </div>
-      <strong>${sectionData[section].progress}%</strong>
-    </div>
-  `;
-});
-
-html += `
-  </div>
-
-  <div class="dashboard-card">
-    <h3>Hotspots</h3>
-    <div class="hotspot-grid">
-`;
-
-Object.keys(hotspots).forEach(pest => {
-  const pestClass = {
-    "Thrips": "hotspot-thrips",
-    "Aphids": "hotspot-aphids",
-    "Whiteflies": "hotspot-whiteflies",
-    "Fungus Gnats": "hotspot-fungus"
-  }[pest];
-
-  html += `
-    <div class="hotspot-card ${pestClass}">
-      <div class="hotspot-pest">${pest}</div>
-      <strong>${hotspots[pest].section}</strong>
-      <span>${hotspots[pest].value}</span>
-    </div>
-  `;
-});
-
-html += `
-    </div>
-  </div>
-
-  <div class="dashboard-card">
-   <h3>Sections With Pest Activity</h3>
-
-    <table class="pest-table">
-      <tr>
-        <th>Sec</th>
-        <th>TR</th>
-        <th>AP</th>
-        <th>WF</th>
-        <th>FG</th>
-      </tr>
-`;
-
-Object.keys(sectionData).forEach(section => {
-  const p = sectionData[section].pests;
-
-  const total =
-    p["Thrips"] +
-    p["Aphids"] +
-    p["Whiteflies"] +
-    p["Fungus Gnats"];
-
-  if (total === 0) return;
-
-  html += `
-    <tr>
-      <td>${section}</td>
-      <td>${p["Thrips"]}</td>
-      <td>${p["Aphids"]}</td>
-      <td>${p["Whiteflies"]}</td>
-      <td>${p["Fungus Gnats"]}</td>
-    </tr>
-  `;
-});
-
-html += `
-      </table>
-
-      <div class="pest-legend">
-        TR = Thrips | AP = Aphids | WF = Whiteflies | FG = Fungus Gnats
-      </div>
-    </div>
-`;
-
-document.getElementById("dashboardPage").innerHTML = html;
-}
-  
-  
 function showPage(page) {
   document.getElementById("scoutPage").style.display = "none";
   document.getElementById("dashboardPage").style.display = "none";
@@ -391,78 +159,33 @@ function showPage(page) {
     renderSections();
   }
 
-if (page === "dashboard") {
-  document.getElementById("dashboardPage").style.display = "block";
-  document.querySelectorAll(".nav-link")[1].classList.add("active");
-  updateBottomBar("sections");
-  showScoutNameOnly();
-  loadDashboard();
-}
-
-if (page === "heatmaps") {
-  document.getElementById("heatmapsPage").style.display = "block";
-  document.querySelectorAll(".nav-link")[2].classList.add("active");
-  updateBottomBar("sections");
-  showScoutNameOnly();
-  loadHeatMaps();
-}
-
-if (page === "reports") {
-  document.getElementById("reportsPage").style.display = "block";
-  document.querySelectorAll(".nav-link")[3].classList.add("active");
-  updateBottomBar("sections");
-  showScoutNameOnly();
-}
-}
-
-loadStatus();
-
-function loadStatus() {
-  const callbackName = "statusCallback_" + Date.now();
-
-  window[callbackName] = function(data) {
-    if (data.success) {
-      weekStatus = data.records || {};
-      currentWeek = data.week || "";
-
-      document.getElementById("weekDisplay").innerHTML =
-        currentWeek ? "Week " + currentWeek : "";
-
-      if (currentScout) {
-       document.getElementById("currentScout").innerHTML =
-  `Scout: ${currentScout} <span class="edit-scout-btn" onclick="changeScout()">✎</span>`;
-
-        renderSections();
-      } else {
-        selectScout();
-      }
-    }
-
-    delete window[callbackName];
-    script.remove();
-  };
-
-  const script = document.createElement("script");
-  script.src = API_URL + "?action=getStatus&callback=" + callbackName;
-  document.body.appendChild(script);
-}
-function updateBottomBar(screen) {
-  const bar = document.getElementById("bottomBar");
-  const sectionsBtn = document.getElementById("bottomSectionsBtn");
-  const baysBtn = document.getElementById("bottomBaysBtn");
-
-  if (screen === "sections") {
-    bar.classList.add("hidden");
-    return;
+  if (page === "dashboard") {
+    document.getElementById("dashboardPage").style.display = "block";
+    document.querySelectorAll(".nav-link")[1].classList.add("active");
+    updateBottomBar("sections");
+    showScoutNameOnly();
+    loadDashboard();
   }
 
-  bar.classList.remove("hidden");
+  if (page === "heatmaps") {
+    document.getElementById("heatmapsPage").style.display = "block";
+    document.querySelectorAll(".nav-link")[2].classList.add("active");
+    updateBottomBar("sections");
+    showScoutNameOnly();
+    loadHeatMaps();
+  }
 
-  sectionsBtn.style.display = screen === "bays" ? "block" : "none";
-  baysBtn.style.display = screen === "entry" ? "block" : "none";
+  if (page === "reports") {
+    document.getElementById("reportsPage").style.display = "block";
+    document.querySelectorAll(".nav-link")[3].classList.add("active");
+    updateBottomBar("sections");
+    showScoutNameOnly();
+  }
 }
-function selectScout() {
 
+/* ---------- SCOUT NAME ---------- */
+
+function selectScout() {
   let html = `
     <h2>Scout Name</h2>
 
@@ -480,6 +203,7 @@ function selectScout() {
 
   document.getElementById("sectionContainer").innerHTML = html;
 }
+
 function saveScoutName() {
   const name = document.getElementById("scoutNameInput").value.trim();
 
@@ -491,12 +215,11 @@ function saveScoutName() {
   currentScout = name;
   localStorage.setItem("currentScout", name);
 
-  document.getElementById("currentScout").innerHTML =
-    "Scout: " + name;
-
+  showScoutWithPencil();
   renderSections();
 }
- function showScoutWithPencil() {
+
+function showScoutWithPencil() {
   document.getElementById("currentScout").innerHTML =
     `Scout: ${currentScout}&nbsp;<span class="edit-scout-btn" onclick="changeScout()">✎</span>`;
 }
@@ -504,13 +227,23 @@ function saveScoutName() {
 function showScoutNameOnly() {
   document.getElementById("currentScout").innerHTML =
     `Scout: ${currentScout}`;
-} 
+}
+
+function changeScout() {
+  localStorage.removeItem("currentScout");
+  currentScout = "";
+  document.getElementById("currentScout").innerHTML = "";
+  selectScout();
+}
+
+/* ---------- SCOUT PAGE ---------- */
+
 function renderSections() {
   selectedSection = "";
   selectedBay = "";
-updateBottomBar("sections");
+
+  updateBottomBar("sections");
   showScoutWithPencil();
-  document.getElementById("currentScout").style.display = "block";
 
   document.getElementById("bayContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
@@ -531,18 +264,18 @@ updateBottomBar("sections");
 
 function showBays(section) {
   const progress = getSectionPercent(section);
+
   selectedSection = section;
   selectedBay = "";
 
   updateBottomBar("bays");
   showScoutNameOnly();
-  document.getElementById("currentScout").style.display = "block";
 
   document.getElementById("sectionContainer").innerHTML = "";
   document.getElementById("entryContainer").innerHTML = "";
 
   let html = `
-        <h2>${section} - Select Bay</h2>
+    <h2>${section} - Select Bay</h2>
     <div class="section-percent">Progress: ${progress}%</div>
     <div class="grid bay-grid">
   `;
@@ -580,6 +313,7 @@ function getBayStatus(section, bay) {
 
   return "not-scouted";
 }
+
 function getEntryData(section, bay) {
   return new Promise((resolve) => {
     const callbackName = "entryCallback_" + Date.now();
@@ -603,8 +337,6 @@ function getEntryData(section, bay) {
   });
 }
 
-
- 
 async function handleBayClick(bay) {
   const key = selectedSection + "|" + bay;
   const status = weekStatus[key];
@@ -614,9 +346,7 @@ async function handleBayClick(bay) {
       "This bay was already entered this week.\n\nDo you want to modify it?"
     );
 
-    if (!answer) {
-      return;
-    }
+    if (!answer) return;
 
     const entryData = await getEntryData(selectedSection, bay);
     showEntry(bay, entryData);
@@ -625,19 +355,16 @@ async function handleBayClick(bay) {
 
   showEntry(bay);
 }
+
 function showEntry(bay, entryData = null) {
   selectedBay = bay;
 
   updateBottomBar("entry");
   showScoutNameOnly();
-  
-  document.getElementById("currentScout").style.display = "block";
 
   document.getElementById("bayContainer").innerHTML = "";
 
-  let html = `
-    <h2>${selectedSection} - ${selectedBay}</h2>
-  `;
+  let html = `<h2>${selectedSection} - ${selectedBay}</h2>`;
 
   pests.forEach(pest => {
     const savedValue =
@@ -658,8 +385,8 @@ function showEntry(bay, entryData = null) {
     ? new Date(entryData.lastUpdated).toLocaleString()
     : "";
   const lastScout = entryData && entryData.lastScout
-  ? entryData.lastScout
-  : "";
+    ? entryData.lastScout
+    : "";
 
   html += `
     <label><strong>Notes</strong></label>
@@ -756,6 +483,340 @@ async function saveEmptyBay() {
     document.getElementById("message").className = "message error-message";
   }
 }
+
+/* ---------- DASHBOARD ---------- */
+
+function renderDashboard(data) {
+  if (!data || !data.success) {
+    document.getElementById("dashboardPage").innerHTML =
+      "<h2>Dashboard</h2><p>Could not load dashboard data.</p>";
+    return;
+  }
+
+  const sectionData = data.sectionData;
+  const hotspots = data.hotspots;
+
+  let html = `
+    <h2>Dashboard</h2>
+
+    <div class="dashboard-card">
+      <div class="dashboard-title">Week ${data.week}</div>
+      <div class="dashboard-percent">${data.progress}% Complete</div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${data.progress}%"></div>
+      </div>
+    </div>
+
+    <div class="dashboard-card">
+      <h3>Section Completion</h3>
+  `;
+
+  Object.keys(sectionData).forEach(section => {
+    html += `
+      <div class="section-row">
+        <span>${section}</span>
+        <div class="small-progress">
+          <div class="small-fill" style="width:${sectionData[section].progress}%"></div>
+        </div>
+        <strong>${sectionData[section].progress}%</strong>
+      </div>
+    `;
+  });
+
+  html += `
+    </div>
+
+    <div class="dashboard-card">
+      <h3>Hotspots</h3>
+      <div class="hotspot-grid">
+  `;
+
+  Object.keys(hotspots).forEach(pest => {
+    const pestClass = {
+      "Thrips": "hotspot-thrips",
+      "Aphids": "hotspot-aphids",
+      "Whiteflies": "hotspot-whiteflies",
+      "Fungus Gnats": "hotspot-fungus"
+    }[pest];
+
+    html += `
+      <div class="hotspot-card ${pestClass}">
+        <div class="hotspot-pest">${pest}</div>
+        <strong>${hotspots[pest].section}</strong>
+        <span>${hotspots[pest].value}</span>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+
+    <div class="dashboard-card">
+      <h3>Sections With Pest Activity</h3>
+
+      <table class="pest-table">
+        <tr>
+          <th>Sec</th>
+          <th>TR</th>
+          <th>AP</th>
+          <th>WF</th>
+          <th>FG</th>
+        </tr>
+  `;
+
+  Object.keys(sectionData).forEach(section => {
+    const p = sectionData[section].pests;
+
+    const total =
+      p["Thrips"] +
+      p["Aphids"] +
+      p["Whiteflies"] +
+      p["Fungus Gnats"];
+
+    if (total === 0) return;
+
+    html += `
+      <tr>
+        <td>${section}</td>
+        <td>${p["Thrips"]}</td>
+        <td>${p["Aphids"]}</td>
+        <td>${p["Whiteflies"]}</td>
+        <td>${p["Fungus Gnats"]}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+      </table>
+
+      <div class="pest-legend">
+        TR = Thrips | AP = Aphids | WF = Whiteflies | FG = Fungus Gnats
+      </div>
+    </div>
+  `;
+
+  document.getElementById("dashboardPage").innerHTML = html;
+}
+
+/* ---------- HEAT MAPS ---------- */
+
+function getHeatClass(value, max) {
+  if (max === 0) return "heat-low";
+
+  const pct = value / max;
+
+  if (pct >= 0.75) return "heat-very-high";
+  if (pct >= 0.50) return "heat-high";
+  if (pct >= 0.25) return "heat-mid";
+
+  return "heat-low";
+}
+
+function getHeatCellClass(value, pest) {
+  if (pest === "Thrips") {
+    if (value >= 40) return "map-red";
+    if (value >= 30) return "map-orange";
+    if (value >= 20) return "map-yellow";
+    if (value >= 15) return "map-green";
+  }
+
+  if (pest === "Aphids") {
+    if (value >= 20) return "map-red";
+    if (value >= 15) return "map-orange";
+    if (value >= 10) return "map-yellow";
+    if (value >= 5) return "map-green";
+  }
+
+  return "map-green";
+}
+
+function renderSummaryHotspots(title, threshold, hotspotList) {
+  const count = hotspotList ? hotspotList.length : 0;
+  const topItems = hotspotList ? hotspotList.slice(0, 5) : [];
+
+  let html = `
+    <div class="dashboard-card">
+      <h3>${title}</h3>
+      <div class="dashboard-percent">${count} Bays</div>
+      <div class="heat-subtitle">Threshold ≥ ${threshold}</div>
+  `;
+
+  if (count === 0) {
+    html += `<p>No hotspots above threshold this week.</p>`;
+  } else {
+    topItems.forEach(item => {
+      html += `
+        <div class="section-row">
+          <span>${item.label}</span>
+          <div class="small-progress">
+            <div class="small-fill" style="width:100%"></div>
+          </div>
+          <strong>${item.count}</strong>
+        </div>
+      `;
+    });
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function renderExportHotspotCells(title, threshold, hotspotList, pest) {
+  let html = `
+    <div class="heat-card">
+      <div class="heat-title">${title}</div>
+      <div class="heat-subtitle">Hot Spots by Bay — Threshold ≥ ${threshold}</div>
+
+      <div class="hotspot-wrap">
+  `;
+
+  if (!hotspotList || hotspotList.length === 0) {
+    html += `<div class="no-hotspots">No hotspots above threshold this week.</div>`;
+  }
+
+  hotspotList.forEach(item => {
+    html += `
+      <div class="hotspot-cell ${getHeatCellClass(item.count, pest)}">
+        <strong>${item.count}</strong>
+        <span>${item.label}</span>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  return html;
+}
+
+function renderHeatMaps(data) {
+  if (!data || !data.success) {
+    document.getElementById("heatmapsPage").innerHTML =
+      "<h2>Heat Maps</h2><p>Could not load heat map data.</p>";
+    return;
+  }
+
+  const fungusData = data.fungusGnatsBySection || {};
+  const thripsHotspots = data.thripsHotspots || [];
+  const aphidsHotspots = data.aphidsHotspots || [];
+
+  const sectionNames = Object.keys(fungusData);
+  const maxFG = Math.max(
+    ...sectionNames.map(section => fungusData[section]["Fungus Gnats"] || 0),
+    0
+  );
+
+  let html = `
+    <h2>Heat Maps</h2>
+
+    <button class="download-btn" onclick="downloadHeatMap()">Download Presentation PNG</button>
+
+    <div class="dashboard-card">
+      <h3>Fungus Gnats</h3>
+      <div class="heat-subtitle">Total count by section</div>
+      <div class="heat-row">
+  `;
+
+  sectionOrder.forEach(section => {
+    const value =
+      fungusData[section] && fungusData[section]["Fungus Gnats"]
+        ? fungusData[section]["Fungus Gnats"]
+        : 0;
+
+    const heatClass = getHeatClass(value, maxFG);
+
+    html += `
+      <div class="heat-cell ${heatClass}">
+        <strong>${value}</strong>
+        <span>${section}</span>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  html += renderSummaryHotspots("Thrips Hotspots", 15, thripsHotspots);
+  html += renderSummaryHotspots("Aphids Hotspots", 5, aphidsHotspots);
+
+  html += `
+    <div id="heatMapExport" style="position:absolute; left:-99999px; top:0; width:1400px;">
+      <h2>Week ${data.week} Heat Maps</h2>
+
+      <div class="heat-card">
+        <div class="heat-title">Fungus Gnats</div>
+        <div class="heat-subtitle">Total count by section</div>
+        <div class="heat-row">
+  `;
+
+  sectionOrder.forEach(section => {
+    const value =
+      fungusData[section] && fungusData[section]["Fungus Gnats"]
+        ? fungusData[section]["Fungus Gnats"]
+        : 0;
+
+    const heatClass = getHeatClass(value, maxFG);
+
+    html += `
+      <div class="heat-cell ${heatClass}">
+        <strong>${value}</strong>
+        <span>${section}</span>
+      </div>
+    `;
+  });
+
+  html += `
+        </div>
+      </div>
+  `;
+
+  html += renderExportHotspotCells("Thrips", 15, thripsHotspots, "Thrips");
+  html += renderExportHotspotCells("Aphids", 5, aphidsHotspots, "Aphids");
+
+  html += `
+    </div>
+  `;
+
+  document.getElementById("heatmapsPage").innerHTML = html;
+}
+
+function downloadHeatMap() {
+  const element = document.getElementById("heatMapExport");
+
+  html2canvas(element, {
+    backgroundColor: "#ffffff",
+    scale: 2
+  }).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "IPM_Heat_Map.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  });
+}
+
+/* ---------- FOOTER NAV ---------- */
+
+function updateBottomBar(screen) {
+  const bar = document.getElementById("bottomBar");
+  const sectionsBtn = document.getElementById("bottomSectionsBtn");
+  const baysBtn = document.getElementById("bottomBaysBtn");
+
+  if (screen === "sections") {
+    bar.classList.add("hidden");
+    return;
+  }
+
+  bar.classList.remove("hidden");
+
+  sectionsBtn.style.display = screen === "bays" ? "block" : "none";
+  baysBtn.style.display = screen === "entry" ? "block" : "none";
+}
+
 function goToSections() {
   renderSections();
 }
@@ -764,12 +825,6 @@ function goToBays() {
   if (selectedSection) {
     showBays(selectedSection);
   }
-}
-  function changeScout() {
-  localStorage.removeItem("currentScout");
-  currentScout = "";
-  document.getElementById("currentScout").innerHTML = "";
-  selectScout();
 }
 </script>
 
