@@ -630,21 +630,23 @@ function getFungusColor(v) {
 }
 
 function getAphidColor(v) {
-  if (v >= 80) return "#4A148C";
-  if (v >= 60) return "#6A1B9A";
-  if (v >= 40) return "#8E24AA";
-  if (v >= 25) return "#AB47BC";
-  if (v >= 15) return "#BA68C8";
-  if (v >= 10) return "#CE93D8";
-  if (v >= 5)  return "#E1BEE7";
-  return "#F3E5F5";
+
+  if (v >= 80) return "#8A5A00";   // dark amber
+  if (v >= 60) return "#A66A00";
+  if (v >= 40) return "#C88719";
+  if (v >= 25) return "#DDAA3A";
+  if (v >= 15) return "#E8C86A";
+  if (v >= 10) return "#F1DE9A";
+  if (v >= 5)  return "#F7EBC3";
+  return "#FFF8E6";
+
 }
 
 function getTextColor(backgroundColor) {
 const darkColors = [
-  "#4A148C",
-  "#6A1B9A",
-  "#8E24AA",
+  "#8A5A00",
+  "#A66A00",
+  "#C88719",
   "#7F0000",
   "#A30000",
   "#C40000",
