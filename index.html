@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=137">
+  <link rel="stylesheet" href="css/style.css?v=145">
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
@@ -85,6 +85,8 @@ let currentScout = localStorage.getItem("currentScout") || "";
 
 loadStatus();
 
+/* ---------- LOAD DATA ---------- */
+
 function loadStatus() {
   const callbackName = "statusCallback_" + Date.now();
 
@@ -142,6 +144,8 @@ function loadHeatMaps() {
   script.src = API_URL + "?action=getHeatMaps&callback=" + callbackName;
   document.body.appendChild(script);
 }
+
+/* ---------- PAGE NAVIGATION ---------- */
 
 function showPage(page) {
   document.getElementById("scoutPage").style.display = "none";
@@ -601,46 +605,80 @@ function renderDashboard(data) {
 
 /* ---------- HEAT MAPS ---------- */
 
-
-function getThripsColor(v){
-
-  if(v >= 120) return "#7F0000";
-  if(v >= 100) return "#A30000";
-  if(v >= 80)  return "#C40000";
-  if(v >= 65)  return "#D94715";
-  if(v >= 50)  return "#E96E21";
-  if(v >= 35)  return "#F08E2E";
-  if(v >= 25)  return "#EBC46A";
-  if(v >= 15)  return "#F6E8B1";
-
+function getThripsColor(v) {
+  if (v >= 120) return "#7F0000";
+  if (v >= 100) return "#A30000";
+  if (v >= 80)  return "#C40000";
+  if (v >= 65)  return "#D94715";
+  if (v >= 50)  return "#E96E21";
+  if (v >= 35)  return "#F08E2E";
+  if (v >= 25)  return "#EBC46A";
+  if (v >= 15)  return "#F6E8B1";
   return "#FFFFFF";
 }
 
-function getFungusColor(v){
-
-  if(v >= 1500) return "#1B5E20";
-  if(v >= 1200) return "#2E7D32";
-  if(v >= 900)  return "#3E8E41";
-  if(v >= 700)  return "#5E9E45";
-  if(v >= 500)  return "#7CB342";
-  if(v >= 300)  return "#A5C85A";
-  if(v >= 100)  return "#C5D97A";
-  if(v > 0)     return "#E6EFC1";
-
+function getFungusColor(v) {
+  if (v >= 1500) return "#1B5E20";
+  if (v >= 1200) return "#2E7D32";
+  if (v >= 900)  return "#3E8E41";
+  if (v >= 700)  return "#5E9E45";
+  if (v >= 500)  return "#7CB342";
+  if (v >= 300)  return "#A5C85A";
+  if (v >= 100)  return "#C5D97A";
+  if (v > 0)     return "#E6EFC1";
   return "#F8F8F8";
 }
 
-function getAphidColor(v){
-
-  if(v >= 80) return "#08306B";
-  if(v >= 60) return "#08519C";
-  if(v >= 40) return "#2171B5";
-  if(v >= 25) return "#4292C6";
-  if(v >= 15) return "#6BAED6";
-  if(v >= 10) return "#9ECAE1";
-  if(v >= 5)  return "#C6DBEF";
-
+function getAphidColor(v) {
+  if (v >= 80) return "#08306B";
+  if (v >= 60) return "#08519C";
+  if (v >= 40) return "#2171B5";
+  if (v >= 25) return "#4292C6";
+  if (v >= 15) return "#6BAED6";
+  if (v >= 10) return "#9ECAE1";
+  if (v >= 5)  return "#C6DBEF";
   return "#F7FBFF";
+}
+
+function getTextColor(backgroundColor) {
+  const darkColors = [
+    "#08306B", "#08519C", "#2171B5",
+    "#7F0000", "#A30000", "#C40000",
+    "#1B5E20", "#2E7D32", "#3E8E41"
+  ];
+
+  return darkColors.includes(backgroundColor) ? "white" : "#111827";
+}
+
+function buildHotspotsFromBayCounts(bayCounts, pest, threshold) {
+  const hotspots = [];
+
+  Object.keys(bayCounts || {}).forEach(section => {
+    Object.keys(bayCounts[section] || {}).forEach(bay => {
+      const bayData = bayCounts[section][bay] || {};
+      const value = Number(bayData[pest] || 0);
+
+      if (value >= threshold) {
+        hotspots.push({
+          label: section + " " + bay,
+          count: value
+        });
+      }
+    });
+  });
+
+  hotspots.sort((a, b) => b.count - a.count);
+  return hotspots;
+}
+
+function chunkArray(array, size) {
+  const chunks = [];
+
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+
+  return chunks;
 }
 
 function renderSummaryHotspots(title, threshold, hotspotList) {
@@ -674,68 +712,6 @@ function renderSummaryHotspots(title, threshold, hotspotList) {
   return html;
 }
 
-function renderExportHotspotCells(title, threshold, hotspotList, pest) {
-  let html = `
-    <div class="heat-card">
-      <div class="heat-title">${title}</div>
-      <div class="heat-subtitle">Hot Spots by Bay — Threshold ≥ ${threshold}</div>
-
-      <div class="hotspot-wrap">
-  `;
-
-  if (!hotspotList || hotspotList.length === 0) {
-    html += `<div class="no-hotspots">No hotspots above threshold this week.</div>`;
-  }
-
-  hotspotList.forEach(item => {
-    html += `
-      <div class="hotspot-cell ${getHeatCellClass(item.count, pest)}">
-        <strong>${item.count}</strong>
-        <span>${item.label}</span>
-      </div>
-    `;
-  });
-
-  html += `
-      </div>
-    </div>
-  `;
-
-  return html;
-}
-
-  function buildHotspotsFromBayCounts(bayCounts, pest, threshold) {
-  const hotspots = [];
-
-  Object.keys(bayCounts || {}).forEach(section => {
-    Object.keys(bayCounts[section] || {}).forEach(bay => {
-      const bayData = bayCounts[section][bay] || {};
-      const value = Number(bayData[pest] || 0);
-
-      if (value >= threshold) {
-        hotspots.push({
-          label: section + " " + bay,
-          count: value
-        });
-      }
-    });
-  });
-
-  hotspots.sort((a, b) => b.count - a.count);
-
-  return hotspots;
-}
-
-function chunkArray(array, size) {
-  const chunks = [];
-
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-
-  return chunks;
-}
-
 function renderExportStrip(title, subtitle, items, pest, perRow = 10) {
   let html = `
     <div class="export-strip-section">
@@ -757,36 +733,32 @@ function renderExportStrip(title, subtitle, items, pest, perRow = 10) {
     rows.forEach(row => {
       html += `<div class="export-strip-row">`;
 
-   row.forEach(item => {
+      row.forEach(item => {
+        let color = "#FFFFFF";
 
-  let color;
+        if (pest === "Thrips") {
+          color = getThripsColor(item.count);
+        }
 
-  if (pest === "Thrips") {
-    color = getThripsColor(item.count);
-  } else {
-    color = getAphidColor(item.count);
-  }
+        if (pest === "Aphids") {
+          color = getAphidColor(item.count);
+        }
 
-  const textColor =
-    color === "#08306B" ||
-    color === "#08519C" ||
-    color === "#2171B5" ||
-    color === "#7F0000" ||
-    color === "#A30000" ||
-    color === "#C40000"
-      ? "white"
-      : "#111827";
+        const textColor = getTextColor(color);
 
-  html += `
-    <div
-      class="export-strip-cell"
-      style="background:${color}; color:${textColor};"
-    >
-      <strong>${item.count}</strong>
-      <span>${item.label}</span>
-    </div>
-  `;
-});
+        html += `
+          <div
+            class="export-strip-cell"
+            style="background:${color}; color:${textColor};"
+          >
+            <strong>${item.count}</strong>
+            <span>${item.label}</span>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+    });
   }
 
   html += `</div>`;
@@ -804,16 +776,14 @@ function renderHeatMaps(data) {
   const bayCounts = data.bayCounts || {};
 
   const thripsHotspots =
-    data.thripsHotspots || buildHotspotsFromBayCounts(bayCounts, "Thrips", 15);
+    data.thripsHotspots && data.thripsHotspots.length
+      ? data.thripsHotspots
+      : buildHotspotsFromBayCounts(bayCounts, "Thrips", 15);
 
   const aphidsHotspots =
-    data.aphidsHotspots || buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
-
-  const sectionNames = Object.keys(fungusData);
-  const maxFG = Math.max(
-    ...sectionNames.map(section => fungusData[section]["Fungus Gnats"] || 0),
-    0
-  );
+    data.aphidsHotspots && data.aphidsHotspots.length
+      ? data.aphidsHotspots
+      : buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
 
   let html = `
     <h2>Heat Maps</h2>
@@ -832,10 +802,14 @@ function renderHeatMaps(data) {
         ? fungusData[section]["Fungus Gnats"]
         : 0;
 
-    const heatClass = getHeatClass(value, maxFG);
+    const color = getFungusColor(value);
+    const textColor = getTextColor(color);
 
     html += `
-      <div class="heat-cell ${heatClass}">
+      <div
+        class="heat-cell"
+        style="background:${color}; color:${textColor};"
+      >
         <strong>${value}</strong>
         <span>${section}</span>
       </div>
@@ -869,13 +843,13 @@ function renderHeatMaps(data) {
         ? fungusData[section]["Fungus Gnats"]
         : 0;
 
-   const color = getFungusColor(value);
-    const textColor = value >= maxFG * 0.75 ? "white" : "#111827";
+    const color = getFungusColor(value);
+    const textColor = getTextColor(color);
 
     html += `
       <div
         class="export-strip-cell"
-        style="background:${color};color:${textColor};"
+        style="background:${color}; color:${textColor};"
       >
         <strong>${value}</strong>
         <span>${section}</span>
