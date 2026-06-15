@@ -814,18 +814,7 @@ function renderHeatMaps(data) {
         ? fungusData[section]["Fungus Gnats"]
         : 0;
 
-    const color = getHeatColor(value, 0, maxFG);
-
-const textColor =
-  value >= maxFG * 0.75
-    ? "white"
-    : "#111827";
-
-html += `
-  <div
-    class="export-strip-cell"
-    style="background:${color};color:${textColor};"
-  >
+    const heatClass = getHeatClass(value, maxFG);
 
     html += `
       <div class="heat-cell ${heatClass}">
@@ -840,8 +829,8 @@ html += `
     </div>
   `;
 
-  html += renderSummaryHotspots("Thrips Hotspots", 15, thripsHotspots, "Thrips");
-  html += renderSummaryHotspots("Aphids Hotspots", 5, aphidsHotspots, "Aphids");
+  html += renderSummaryHotspots("Thrips Hotspots", 15, thripsHotspots);
+  html += renderSummaryHotspots("Aphids Hotspots", 5, aphidsHotspots);
 
   html += `
     <div id="heatMapExport" style="position:absolute; left:-99999px; top:0; width:1500px;">
@@ -862,10 +851,14 @@ html += `
         ? fungusData[section]["Fungus Gnats"]
         : 0;
 
-    const heatClass = getHeatClass(value, maxFG);
+    const color = getHeatColor(value, 0, maxFG);
+    const textColor = value >= maxFG * 0.75 ? "white" : "#111827";
 
     html += `
-      <div class="export-strip-cell ${heatClass}">
+      <div
+        class="export-strip-cell"
+        style="background:${color};color:${textColor};"
+      >
         <strong>${value}</strong>
         <span>${section}</span>
       </div>
