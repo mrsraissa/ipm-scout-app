@@ -601,46 +601,46 @@ function renderDashboard(data) {
 
 /* ---------- HEAT MAPS ---------- */
 
-function getHeatClass(value, max) {
-  if (max === 0) return "heat-low";
 
-  const pct = value / max;
+function getThripsColor(v){
 
-  if (pct >= 0.75) return "heat-very-high";
-  if (pct >= 0.50) return "heat-high";
-  if (pct >= 0.25) return "heat-mid";
+  if(v >= 120) return "#7F0000";
+  if(v >= 100) return "#A30000";
+  if(v >= 80)  return "#C40000";
+  if(v >= 65)  return "#D94715";
+  if(v >= 50)  return "#E96E21";
+  if(v >= 35)  return "#F08E2E";
+  if(v >= 25)  return "#EBC46A";
+  if(v >= 15)  return "#F6E8B1";
 
-  return "heat-low";
+  return "#FFFFFF";
 }
-function getHeatColor(value, min, max) {
 
-  if (max === min) return "#F5E6A3";
+function getFungusColor(v){
 
-  const pct = (value - min) / (max - min);
+  if(v >= 1500) return "#1B5E20";
+  if(v >= 1200) return "#2E7D32";
+  if(v >= 900)  return "#3E8E41";
+  if(v >= 700)  return "#5E9E45";
+  if(v >= 500)  return "#7CB342";
+  if(v >= 300)  return "#A5C85A";
+  if(v >= 100)  return "#C5D97A";
+  if(v > 0)     return "#E6EFC1";
 
-  if (pct < 0.20) return "#F5E6A3";
-  if (pct < 0.40) return "#E8C46A";
-  if (pct < 0.60) return "#E67E22";
-  if (pct < 0.80) return "#D9480F";
-
-  return "#B30000";
+  return "#F8F8F8";
 }
-function getHeatCellClass(value, pest) {
-  if (pest === "Thrips") {
-    if (value >= 40) return "map-red";
-    if (value >= 30) return "map-orange";
-    if (value >= 20) return "map-yellow";
-    if (value >= 15) return "map-green";
-  }
 
-  if (pest === "Aphids") {
-    if (value >= 20) return "map-red";
-    if (value >= 15) return "map-orange";
-    if (value >= 10) return "map-yellow";
-    if (value >= 5) return "map-green";
-  }
+function getAphidColor(v){
 
-  return "map-green";
+  if(v >= 80) return "#08306B";
+  if(v >= 60) return "#08519C";
+  if(v >= 40) return "#2171B5";
+  if(v >= 25) return "#4292C6";
+  if(v >= 15) return "#6BAED6";
+  if(v >= 10) return "#9ECAE1";
+  if(v >= 5)  return "#C6DBEF";
+
+  return "#F7FBFF";
 }
 
 function renderSummaryHotspots(title, threshold, hotspotList) {
@@ -757,20 +757,36 @@ function renderExportStrip(title, subtitle, items, pest, perRow = 10) {
     rows.forEach(row => {
       html += `<div class="export-strip-row">`;
 
-      row.forEach(item => {
-        html += `
-          <div
-  class="export-strip-cell"
-  style="background:${getHeatColor(item.count, 0, Math.max(...items.map(x => x.count)))}; color:${item.count >= Math.max(...items.map(x => x.count)) * 0.75 ? 'white' : '#111827'};"
->
-            <strong>${item.count}</strong>
-            <span>${item.label}</span>
-          </div>
-        `;
-      });
+   row.forEach(item => {
 
-      html += `</div>`;
-    });
+  let color;
+
+  if (pest === "Thrips") {
+    color = getThripsColor(item.count);
+  } else {
+    color = getAphidColor(item.count);
+  }
+
+  const textColor =
+    color === "#08306B" ||
+    color === "#08519C" ||
+    color === "#2171B5" ||
+    color === "#7F0000" ||
+    color === "#A30000" ||
+    color === "#C40000"
+      ? "white"
+      : "#111827";
+
+  html += `
+    <div
+      class="export-strip-cell"
+      style="background:${color}; color:${textColor};"
+    >
+      <strong>${item.count}</strong>
+      <span>${item.label}</span>
+    </div>
+  `;
+});
   }
 
   html += `</div>`;
@@ -853,7 +869,7 @@ function renderHeatMaps(data) {
         ? fungusData[section]["Fungus Gnats"]
         : 0;
 
-    const color = getHeatColor(value, 0, maxFG);
+   const color = getFungusColor(value);
     const textColor = value >= maxFG * 0.75 ? "white" : "#111827";
 
     html += `
