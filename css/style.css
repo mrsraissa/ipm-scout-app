@@ -478,13 +478,13 @@ textarea{
 .export-strip-cell strong{
   font-size:30px;
 }
-
 .export-strip-cell span{
   position:absolute;
-  top:92px;
-  font-size:20px;
-  color:#111827;
-  transform:rotate(-25deg);
+  top:90px;
+  font-size:18px;
+  font-weight:500;
+  color:#4b5563;
+  transform:rotate(-15deg);
   white-space:nowrap;
 }
 
