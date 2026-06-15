@@ -480,9 +480,9 @@ textarea{
 }
 .export-strip-cell span{
   position:absolute;
-  top:90px;
+  top:86px;
   font-size:18px;
-  font-weight:500;
+  font-weight:400;
   color:#4b5563;
   transform:rotate(-15deg);
   white-space:nowrap;
