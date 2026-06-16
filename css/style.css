@@ -493,11 +493,11 @@ textarea{
 
 .export-strip-cell span{
   position:absolute;
-  top:102px;
+  top:104px;
   left:50%;
   transform:translateX(-50%) rotate(-18deg);
-  font-size:16px;
-  font-weight:400;
+  font-size:18px;
+  font-weight:500;
   color:#4b5563;
   white-space:nowrap;
   z-index:5;
