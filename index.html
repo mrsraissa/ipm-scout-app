@@ -731,8 +731,12 @@ function renderSummaryHotspots(title, threshold, hotspotList) {
   html += `</div>`;
   return html;
 }
-
 function renderExportStrip(title, subtitle, items, pest, perRow = 10) {
+
+  if (!items || items.length === 0) {
+    return "";
+  }
+
   let html = `
     <div class="export-strip-section">
       <div class="export-strip-title">
@@ -741,52 +745,45 @@ function renderExportStrip(title, subtitle, items, pest, perRow = 10) {
       </div>
   `;
 
-if (!items || items.length === 0) {
-  html += `</div>`;
-  return html;
-}
-  else {
-    const rows = chunkArray(items, perRow);
+  const rows = chunkArray(items, perRow);
 
-    rows.forEach(row => {
-      html += `<div class="export-strip-row">`;
+  rows.forEach(row => {
+    html += `<div class="export-strip-row">`;
 
-      row.forEach(item => {
-        let color = "#FFFFFF";
+    row.forEach(item => {
+      let color = "#FFFFFF";
 
-        if (pest === "Thrips") {
-          color = getThripsColor(item.count);
-        }
+      if (pest === "Thrips") {
+        color = getThripsColor(item.count);
+      }
 
-        if (pest === "Aphids") {
-          color = getAphidColor(item.count);
-        }
+      if (pest === "Aphids") {
+        color = getAphidColor(item.count);
+      }
 
-        if (pest === "Whiteflies") {
-  color = getWhiteflyColor(item.count);
-}
+      if (pest === "Whiteflies") {
+        color = getWhiteflyColor(item.count);
+      }
 
-        const textColor = getTextColor(color);
+      const textColor = getTextColor(color);
 
-        html += `
-          <div
-            class="export-strip-cell"
-            style="background:${color}; color:${textColor};"
-          >
-            <strong>${item.count}</strong>
-            <span>${item.label}</span>
-          </div>
-        `;
-      });
-
-      html += `</div>`;
+      html += `
+        <div
+          class="export-strip-cell"
+          style="background:${color}; color:${textColor};"
+        >
+          <strong>${item.count}</strong>
+          <span>${item.label}</span>
+        </div>
+      `;
     });
-  }
+
+    html += `</div>`;
+  });
 
   html += `</div>`;
   return html;
 }
-
 function renderHeatMaps(data) {
   if (!data || !data.success) {
     document.getElementById("heatmapsPage").innerHTML =
