@@ -658,11 +658,21 @@ textarea{
 }
 
 .growers-icon{
-  width:70px;
-  height:70px;
-  border-radius:12px;
-}
+  width:78px;
+  height:78px;
+  border-radius:14px;
 
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.growers-icon img{
+  width:52px;
+  height:52px;
+  object-fit:contain;
+  display:block;
+  margin:auto;
+}
 .growers-icon-fungus{ background:#c9bd24; }
 .growers-icon-thrips{ background:#ef8f26; }
 .growers-icon-aphids{ background:#e8d475; }
