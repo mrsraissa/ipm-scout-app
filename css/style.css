@@ -539,9 +539,6 @@ textarea{
 .growers-slide-header h1{
   grid-column:1;
   justify-self:center;
-}
-
-.growers-slide-header h1{
   margin:0;
   color:#2f5f25;
   font-size:42px;
@@ -562,7 +559,7 @@ textarea{
   gap:20px;
   height:930px;
   width:100%;
- }
+}
 
 .growers-hotspots-box{
   width:100%;
@@ -590,20 +587,91 @@ textarea{
   font-size:24px;
   font-weight:900;
 }
+
 .growers-heatmap-area{
   width:100%;
   height:100%;
   display:flex;
   flex-direction:column;
-  gap:6px;
   overflow:hidden;
 }
 
-.growers-heatmap-area .export-strip-row{
-  margin-bottom:46px;
+/* Normal report: few hotspot rows */
+.report-normal .growers-heatmap-area{
+  gap:10px;
 }
-.growers-heatmap-area .export-strip-section{
-  margin-bottom:20px;
+
+.report-normal .growers-heatmap-area .export-strip-section{
+  margin-bottom:25px;
+}
+
+.report-normal .growers-heatmap-area .export-strip-row{
+  margin-bottom:50px;
+}
+
+.report-normal .growers-heatmap-area .export-strip-cell{
+  height:58px;
+}
+
+.report-normal .growers-heatmap-area .export-strip-cell strong{
+  font-size:22px;
+}
+
+.report-normal .growers-heatmap-area .export-strip-cell span{
+  top:66px;
+  font-size:13px;
+}
+
+/* Dense report: several hotspot rows */
+.report-dense .growers-heatmap-area{
+  gap:4px;
+}
+
+.report-dense .growers-heatmap-area .export-strip-section{
+  margin-bottom:14px;
+}
+
+.report-dense .growers-heatmap-area .export-strip-row{
+  margin-bottom:38px;
+}
+
+.report-dense .growers-heatmap-area .export-strip-cell{
+  height:46px;
+}
+
+.report-dense .growers-heatmap-area .export-strip-cell strong{
+  font-size:18px;
+}
+
+.report-dense .growers-heatmap-area .export-strip-cell span{
+  top:52px;
+  font-size:11px;
+}
+
+/* Extra dense report: many hotspot rows */
+.report-extra-dense .growers-heatmap-area{
+  gap:0;
+}
+
+.report-extra-dense .growers-heatmap-area .export-strip-section{
+  margin-bottom:6px;
+}
+
+.report-extra-dense .growers-heatmap-area .export-strip-row{
+  margin-bottom:24px;
+}
+
+.report-extra-dense .growers-heatmap-area .export-strip-cell{
+  height:36px;
+}
+
+.report-extra-dense .growers-heatmap-area .export-strip-cell strong{
+  font-size:15px;
+}
+
+.report-extra-dense .growers-heatmap-area .export-strip-cell span{
+  top:40px;
+  font-size:9px;
 }
 
 .growers-heatmap-area .export-strip-title span{
@@ -612,19 +680,6 @@ textarea{
 
 .growers-heatmap-area .export-strip-title em{
   font-size:15px;
-}
-
-.growers-heatmap-area .export-strip-cell{
-  height:50px;
-}
-
-.growers-heatmap-area .export-strip-cell strong{
-  font-size:21px;
-}
-
-.growers-heatmap-area .export-strip-cell span{
-  top:58px;
-  font-size:12px;
 }
 
 .growers-insights-box{
@@ -652,6 +707,7 @@ textarea{
   padding:30px 26px;
   border-bottom:1px solid #d6c8bd;
   align-items:center;
+  text-align:center;
 }
 
 .growers-insight-item:last-child{
@@ -662,6 +718,7 @@ textarea{
   margin:0 0 8px;
   font-size:20px;
   font-weight:900;
+  text-align:center;
 }
 
 .growers-insight-item p{
@@ -669,17 +726,18 @@ textarea{
   font-size:21px;
   line-height:1.3;
   color:#111827;
+  text-align:center;
 }
 
 .growers-icon{
   width:78px;
   height:78px;
   border-radius:14px;
-
   display:flex;
   align-items:center;
   justify-content:center;
 }
+
 .growers-icon img{
   width:52px;
   height:52px;
@@ -687,10 +745,12 @@ textarea{
   display:block;
   margin:auto;
 }
+
 .growers-icon-fungus{ background:#c9bd24; }
 .growers-icon-thrips{ background:#ef8f26; }
 .growers-icon-aphids{ background:#e8d475; }
 .growers-icon-whiteflies{ background:#8a6240; }
+
 
 /* Mobile */
 
