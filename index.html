@@ -641,7 +641,19 @@ function getAphidColor(v) {
   return "#FFF8E6";
 
 }
+function getWhiteflyColor(v) {
 
+  if (v >= 50) return "#7A3E00";
+  if (v >= 35) return "#A55200";
+  if (v >= 25) return "#C96B00";
+  if (v >= 15) return "#E58A00";
+  if (v >= 10) return "#F2B441";
+  if (v >= 5)  return "#F8D78A";
+
+  return "#FFF5DD";
+}
+
+ 
 function getTextColor(backgroundColor) {
 const darkColors = [
   "#8A5A00",
@@ -750,6 +762,10 @@ if (!items || items.length === 0) {
           color = getAphidColor(item.count);
         }
 
+        if (pest === "Whiteflies") {
+  color = getWhiteflyColor(item.count);
+}
+
         const textColor = getTextColor(color);
 
         html += `
@@ -790,6 +806,11 @@ function renderHeatMaps(data) {
     data.aphidsHotspots && data.aphidsHotspots.length
       ? data.aphidsHotspots
       : buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
+
+  const whitefliesHotspots =
+  data.whitefliesHotspots && data.whitefliesHotspots.length
+    ? data.whitefliesHotspots
+    : buildHotspotsFromBayCounts(bayCounts, "Whiteflies", 5);
 
   let html = `
     <h2>Heat Maps</h2>
@@ -883,7 +904,13 @@ function renderHeatMaps(data) {
     "Aphids",
     10
   );
-
+html += renderExportStrip(
+  "Whiteflies",
+  "Bays Above Threshold (≥5)",
+  whitefliesHotspots,
+  "Whiteflies",
+  10
+);
   html += `
     </div>
   `;
