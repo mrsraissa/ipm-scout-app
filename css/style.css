@@ -453,8 +453,7 @@ textarea{
 }
 .export-strip-row{
   display:flex;
-  width:104%;
-  margin-left:-2%;
+  width:100%;
   border:none;
   border-radius:16px;
   overflow:visible;
