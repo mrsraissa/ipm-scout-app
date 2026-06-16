@@ -563,13 +563,7 @@ textarea{
   line-height:1.35;
   margin:8px 0 0;
 }
-#growersReportExport{
-  display:grid !important;
-  grid-template-columns:minmax(0, 1fr) 430px !important;
-  gap:36px !important;
-  width:1900px !important;
-  align-items:start;
-}
+
 
 .growers-left{
   min-width:0;
