@@ -429,7 +429,7 @@ textarea{
 }
 
 .export-strip-section{
-  margin-bottom:95px;
+  margin-bottom:110px;
 }
 
 .export-strip-title{
@@ -457,7 +457,7 @@ textarea{
   border:none;
   border-radius:10px;
   overflow:visible;
-  margin-bottom:58px;
+  margin-bottom:72px;
 }
 
 .export-strip-cell{
@@ -483,12 +483,14 @@ textarea{
 
 .export-strip-cell span{
   position:absolute;
-  top:78px;
+  top:88px;
+  left:50%;
+  transform:translateX(-50%) rotate(-10deg);
   font-size:17px;
   font-weight:400;
   color:#374151;
-  transform:rotate(-10deg);
   white-space:nowrap;
+  z-index:5;
 }
 
 .export-no-hotspots{
