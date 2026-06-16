@@ -977,16 +977,16 @@ const totalHotspotRows =
   Math.ceil(whitefliesHotspots.length / 10) +
   Math.ceil(aphidsHotspots.length / 10);
 
-const availableHeight = 700;
+const availableHeight = 610;
 
 const stripHeight = Math.max(
-  30,
-  Math.min(70, Math.floor(availableHeight / totalHotspotRows))
+  26,
+  Math.min(62, Math.floor(availableHeight / totalHotspotRows))
 );
 
-const stripLabelTop = stripHeight + 8;
-const stripValueSize = Math.max(14, Math.floor(stripHeight * 0.38));
-const stripLabelSize = Math.max(9, Math.floor(stripHeight * 0.22));
+const stripLabelTop = stripHeight + 5;
+const stripValueSize = Math.max(13, Math.floor(stripHeight * 0.36));
+const stripLabelSize = Math.max(8, Math.floor(stripHeight * 0.20));
   let html = `
     <button class="download-btn" onclick="downloadGrowersReport()">
       Download Growers Weekly Report PNG
