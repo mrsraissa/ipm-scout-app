@@ -729,13 +729,11 @@ function renderExportStrip(title, subtitle, items, pest, perRow = 10) {
       </div>
   `;
 
-  if (!items || items.length === 0) {
-    html += `
-      <div class="export-strip-row">
-        <div class="export-no-hotspots">No hotspots above threshold this week.</div>
-      </div>
-    `;
-  } else {
+if (!items || items.length === 0) {
+  html += `</div>`;
+  return html;
+}
+  else {
     const rows = chunkArray(items, perRow);
 
     rows.forEach(row => {
