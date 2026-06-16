@@ -447,12 +447,14 @@ textarea{
 
 .export-strip-title em{
   font-size:20px;
-  color:#7c7c7c;
+  color:#737373;
+  font-weight:400;
   font-style:normal;
 }
 .export-strip-row{
   display:flex;
-  width:100%;
+  width:104%;
+  margin-left:-2%;
   border:none;
   border-radius:16px;
   overflow:visible;
