@@ -977,21 +977,29 @@ const totalHotspotRows =
   Math.ceil(whitefliesHotspots.length / 10) +
   Math.ceil(aphidsHotspots.length / 10);
 
-let densityClass = "report-normal";
+const availableHeight = 700;
 
-if (totalHotspotRows >= 7) {
-  densityClass = "report-dense";
-}
+const stripHeight = Math.max(
+  30,
+  Math.min(70, Math.floor(availableHeight / totalHotspotRows))
+);
 
-if (totalHotspotRows >= 9) {
-  densityClass = "report-extra-dense";
-}
+const stripLabelTop = stripHeight + 8;
+const stripValueSize = Math.max(14, Math.floor(stripHeight * 0.38));
+const stripLabelSize = Math.max(9, Math.floor(stripHeight * 0.22));
   let html = `
     <button class="download-btn" onclick="downloadGrowersReport()">
       Download Growers Weekly Report PNG
     </button>
 
-    <div id="growersReportExport" class="growers-slide-report ${densityClass}">
+    <div id="growersReportExport"
+     class="growers-slide-report"
+     style="
+       --strip-height:${stripHeight}px;
+       --strip-label-top:${stripLabelTop}px;
+       --strip-value-size:${stripValueSize}px;
+       --strip-label-size:${stripLabelSize}px;
+     ">
 
 
 <div class="growers-slide-header">
