@@ -1101,24 +1101,22 @@ function downloadGrowersReport() {
   const element = document.getElementById("growersReportExport");
 
   html2canvas(element, {
-    backgroundColor: null,
-    scale: 2
+    backgroundColor: "#ffffff",
+    scale: 4,
+    useCORS: true,
+    allowTaint: true
   }).then(canvas => {
-    const link = document.createElement("a");
-    link.download = "Growers_Weekly_IPM_Report.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  });
-}
 
   
 function downloadHeatMap() {
   const element = document.getElementById("heatMapExport");
 
-  html2canvas(element, {
-    backgroundColor: "#ffffff",
-    scale: 2
-  }).then(canvas => {
+ html2canvas(element, {
+  backgroundColor: "#ffffff",
+  scale: 4,
+  useCORS: true,
+  allowTaint: true
+}).then(canvas => {
     const link = document.createElement("a");
     link.download = "IPM_Heat_Map.png";
     link.href = canvas.toDataURL("image/png");
