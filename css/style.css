@@ -559,8 +559,8 @@ textarea{
   display:grid;
   grid-template-columns:minmax(0,1fr) 410px;
   gap:20px;
-  height:930px;
   width:100%;
+  align-items:start;
 }
 
 .growers-hotspots-box{
@@ -568,7 +568,7 @@ textarea{
   min-width:0;
   border:2px solid #2f5f25;
   border-radius:14px;
-  padding:62px 28px 24px;
+  padding:62px 28px 40px;
   position:relative;
   box-sizing:border-box;
 }
