@@ -559,8 +559,9 @@ textarea{
   display:grid;
   grid-template-columns:minmax(0,1fr) 410px;
   gap:20px;
+  height:930px;
   width:100%;
-  align-items:start;
+  align-items:stretch;
 }
 
 .growers-hotspots-box{
@@ -591,10 +592,13 @@ textarea{
 
 .growers-heatmap-area{
   width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-evenly;
 }
-
 .growers-heatmap-area .export-strip-section{
-  margin-bottom:90px;
+  margin-bottom:0;
 }
 
 .growers-heatmap-area .export-strip-title span{
@@ -606,7 +610,7 @@ textarea{
 }
 
 .growers-heatmap-area .export-strip-cell{
-  height:74px;
+  height:78px;
 }
 
 .growers-heatmap-area .export-strip-cell strong{
@@ -614,7 +618,7 @@ textarea{
 }
 
 .growers-heatmap-area .export-strip-cell span{
-  top:84px;
+  top:88px;
   font-size:16px;
 }
 
