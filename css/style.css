@@ -451,14 +451,13 @@ textarea{
   color:#7c7c7c;
   font-style:normal;
 }
-
 .export-strip-row{
   display:flex;
   width:100%;
   border:none;
   border-radius:10px;
-  overflow:hidden;
-  margin-bottom:52px;
+  overflow:visible;
+  margin-bottom:58px;
 }
 
 .export-strip-cell{
@@ -484,7 +483,7 @@ textarea{
 
 .export-strip-cell span{
   position:absolute;
-  top:92px;
+  top:78px;
   font-size:17px;
   font-weight:400;
   color:#374151;
