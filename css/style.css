@@ -596,11 +596,10 @@ textarea{
   height:100%;
   display:flex;
   flex-direction:column;
-  justify-content:space-evenly;
-  overflow:hidden;
+  gap:20px;
 }
 .growers-heatmap-area .export-strip-section{
-  margin-bottom:0;
+  margin-bottom:20px;
 }
 
 .growers-heatmap-area .export-strip-title span{
@@ -621,7 +620,7 @@ textarea{
 
 .growers-heatmap-area .export-strip-cell span{
   top:78px;
-  font-size:56px;
+  font-size:15px;
 }
 
 .growers-insights-box{
