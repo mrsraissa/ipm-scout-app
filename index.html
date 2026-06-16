@@ -1055,13 +1055,26 @@ function getInsightText(pest, hotspots) {
   return `${hotspots.length} bays above threshold. Highest pressure: ${top.join(", ")}.`;
 }
 function renderInsightItem(type, title, text) {
+
+  const iconMap = {
+    fungus: "fungus-gnats.png",
+    thrips: "thrips.png",
+    aphids: "aphids.png",
+    whiteflies: "whiteflies.png"
+  };
+
   return `
     <div class="growers-insight-item">
-      <div class="growers-icon growers-icon-${type}"></div>
+
+      <div class="growers-icon growers-icon-${type}">
+        <img src="${iconMap[type]}">
+      </div>
+
       <div>
         <h4>${title}</h4>
         <p>${text}</p>
       </div>
+
     </div>
   `;
 }
