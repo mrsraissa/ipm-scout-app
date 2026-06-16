@@ -971,13 +971,27 @@ function renderReportsPage() {
   const thripsHotspots = buildHotspotsFromBayCounts(bayCounts, "Thrips", 15);
   const whitefliesHotspots = buildHotspotsFromBayCounts(bayCounts, "Whiteflies", 5);
   const aphidsHotspots = buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
+const totalHotspotRows =
+  1 +
+  Math.ceil(thripsHotspots.length / 10) +
+  Math.ceil(whitefliesHotspots.length / 10) +
+  Math.ceil(aphidsHotspots.length / 10);
 
+let densityClass = "report-normal";
+
+if (totalHotspotRows >= 7) {
+  densityClass = "report-dense";
+}
+
+if (totalHotspotRows >= 9) {
+  densityClass = "report-extra-dense";
+}
   let html = `
     <button class="download-btn" onclick="downloadGrowersReport()">
       Download Growers Weekly Report PNG
     </button>
 
-    <div id="growersReportExport" class="growers-slide-report">
+    <div id="growersReportExport" class="growers-slide-report ${densityClass}">
 
 
 <div class="growers-slide-header">
