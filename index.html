@@ -179,12 +179,13 @@ function showPage(page) {
     loadHeatMaps();
   }
 
-  if (page === "reports") {
-    document.getElementById("reportsPage").style.display = "block";
-    document.querySelectorAll(".nav-link")[3].classList.add("active");
-    updateBottomBar("sections");
-    showScoutNameOnly();
-  }
+if (page === "reports") {
+  document.getElementById("reportsPage").style.display = "block";
+  document.querySelectorAll(".nav-link")[3].classList.add("active");
+  updateBottomBar("sections");
+  showScoutNameOnly();
+  renderReportsPage();
+}
 }
 
 /* ---------- SCOUT NAME ---------- */
@@ -914,7 +915,58 @@ html += renderExportStrip(
 
   document.getElementById("heatmapsPage").innerHTML = html;
 }
+function renderReportsPage() {
+  document.getElementById("reportsPage").innerHTML = `
+    <h2>Reports</h2>
 
+    <div class="dashboard-card">
+      <h3>Growers Weekly Report</h3>
+
+      <p style="color:#64748b;font-weight:700;">
+        Slide-ready weekly IPM report with hot spots and key insights.
+      </p>
+
+      <button class="download-btn" onclick="loadGrowersReport()">
+        Generate Growers Weekly Report
+      </button>
+    </div>
+
+    <div id="growersReportPreview"></div>
+  `;
+}
+
+  function loadGrowersReport() {
+
+  const callbackName = "growersReportCallback_" + Date.now();
+
+  window[callbackName] = function(data) {
+
+    renderGrowersReport(data);
+
+    delete window[callbackName];
+    script.remove();
+
+  };
+
+  const script = document.createElement("script");
+
+  script.src =
+    API_URL +
+    "?action=getHeatMaps&callback=" +
+    callbackName;
+
+  document.body.appendChild(script);
+}
+
+  function renderGrowersReport(data) {
+
+  document.getElementById("growersReportPreview").innerHTML = `
+    <div class="dashboard-card">
+      Report Preview Coming Next Step
+    </div>
+  `;
+
+}
 function downloadHeatMap() {
   const element = document.getElementById("heatMapExport");
 
