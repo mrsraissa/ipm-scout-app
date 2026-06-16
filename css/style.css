@@ -530,9 +530,14 @@ textarea{
 .growers-slide-header{
   height:80px;
   display:grid;
-  grid-template-columns:1fr auto 1fr;
+  grid-template-columns:1fr 410px;
   align-items:center;
   margin-bottom:10px;
+}
+
+.growers-slide-header h1{
+  grid-column:1;
+  justify-self:center;
 }
 
 .growers-slide-header h1{
@@ -589,7 +594,7 @@ textarea{
 }
 
 .growers-heatmap-area .export-strip-section{
-  margin-bottom:70px;
+  margin-bottom:90px;
 }
 
 .growers-heatmap-area .export-strip-title span{
@@ -601,7 +606,7 @@ textarea{
 }
 
 .growers-heatmap-area .export-strip-cell{
-  height:62px;
+  height:74px;
 }
 
 .growers-heatmap-area .export-strip-cell strong{
@@ -609,8 +614,8 @@ textarea{
 }
 
 .growers-heatmap-area .export-strip-cell span{
-  top:70px;
-  font-size:14px;
+  top:84px;
+  font-size:16px;
 }
 
 .growers-insights-box{
