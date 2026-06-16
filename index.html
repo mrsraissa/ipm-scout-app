@@ -977,8 +977,20 @@ function renderReportsPage() {
       Download Growers Weekly Report PNG
     </button>
 
-    <div id="growersReportExport" class="growers-report-export">
-      <div class="growers-left">
+    <div id="growersReportExport" class="growers-slide-report">
+
+      <div class="growers-slide-header">
+        <div></div>
+        <h1>WEEK ${data.week}</h1>
+        <div class="growers-ipm-logo">IPM</div>
+      </div>
+
+      <div class="growers-slide-body">
+
+        <div class="growers-hotspots-box">
+          <div class="growers-hotspots-label">Hot Spots</div>
+
+          <div class="growers-heatmap-area">
   `;
 
   html += `
@@ -1009,55 +1021,23 @@ function renderReportsPage() {
 
   html += `</div></div>`;
 
-  html += renderExportStrip(
-    "Thrips",
-    "Bays Above Threshold (≥15)",
-    thripsHotspots,
-    "Thrips",
-    10
-  );
-
-  html += renderExportStrip(
-    "Whiteflies",
-    "Bays Above Threshold (≥5)",
-    whitefliesHotspots,
-    "Whiteflies",
-    10
-  );
-
-  html += renderExportStrip(
-    "Aphids",
-    "Bays Above Threshold (≥5)",
-    aphidsHotspots,
-    "Aphids",
-    10
-  );
+  html += renderExportStrip("Thrips", "Bays Above Threshold (≥15)", thripsHotspots, "Thrips", 10);
+  html += renderExportStrip("Whiteflies", "Bays Above Threshold (≥5)", whitefliesHotspots, "Whiteflies", 10);
+  html += renderExportStrip("Aphids", "Bays Above Threshold (≥5)", aphidsHotspots, "Aphids", 10);
 
   html += `
-      </div>
-
-      <div class="growers-right">
-        <h3>Key Insights</h3>
-
-        <div class="insight-block">
-          <strong>Thrips</strong>
-          <p>${getInsightText("Thrips", thripsHotspots)}</p>
+          </div>
         </div>
 
-        <div class="insight-block">
-          <strong>Whiteflies</strong>
-          <p>${getInsightText("Whiteflies", whitefliesHotspots)}</p>
+        <div class="growers-insights-box">
+          <div class="growers-insights-header">KEY INSIGHTS</div>
+
+          ${renderInsightItem("fungus", "FUNGUS GNATS", getFungusInsight(fungusData))}
+          ${renderInsightItem("thrips", "THRIPS", getInsightText("Thrips", thripsHotspots))}
+          ${renderInsightItem("aphids", "APHIDS", getInsightText("Aphids", aphidsHotspots))}
+          ${renderInsightItem("whiteflies", "WHITEFLIES", getInsightText("Whiteflies", whitefliesHotspots))}
         </div>
 
-        <div class="insight-block">
-          <strong>Aphids</strong>
-          <p>${getInsightText("Aphids", aphidsHotspots)}</p>
-        </div>
-
-        <div class="insight-block">
-          <strong>Focus Areas</strong>
-          <p>Prioritize bays with the highest counts and continue weekly monitoring.</p>
-        </div>
       </div>
     </div>
   `;
@@ -1073,7 +1053,36 @@ function getInsightText(pest, hotspots) {
 
   return `${hotspots.length} bays above threshold. Highest pressure: ${top.join(", ")}.`;
 }
+function renderInsightItem(type, title, text) {
+  return `
+    <div class="growers-insight-item">
+      <div class="growers-icon growers-icon-${type}"></div>
+      <div>
+        <h4>${title}</h4>
+        <p>${text}</p>
+      </div>
+    </div>
+  `;
+}
 
+function getFungusInsight(fungusData) {
+  const items = [];
+
+  Object.keys(fungusData || {}).forEach(section => {
+    const value = Number(fungusData[section]["Fungus Gnats"] || 0);
+    if (value > 0) {
+      items.push({ section, value });
+    }
+  });
+
+  items.sort((a, b) => b.value - a.value);
+
+  if (items.length === 0) {
+    return "No significant pressure this week.";
+  }
+
+  return `Highest pressure in ${items.slice(0, 3).map(x => x.section).join(", ")}.`;
+}
 function downloadGrowersReport() {
   const element = document.getElementById("growersReportExport");
 
