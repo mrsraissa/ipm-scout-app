@@ -490,14 +490,13 @@ textarea{
 .export-strip-cell strong{
   font-size:30px;
 }
-
 .export-strip-cell span{
   position:absolute;
-  top:104px;
+  top:106px;
   left:50%;
-  transform:translateX(-50%) rotate(-18deg);
-  font-size:18px;
-  font-weight:500;
+  transform:translateX(-50%) rotate(-22deg);
+  font-size:20px;
+  font-weight:600;
   color:#4b5563;
   white-space:nowrap;
   z-index:5;
