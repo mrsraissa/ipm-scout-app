@@ -344,9 +344,8 @@ textarea{
 }
 
 #heatMapExport{
-  background:#fbfbf8;
-  padding:18px;
-  border-radius:14px;
+  background:transparent;
+  padding:0;
 }
 
 .heat-title{
@@ -429,7 +428,7 @@ textarea{
 }
 
 .export-strip-section{
-  margin-bottom:110px;
+  margin-bottom:85px;
 }
 
 .export-strip-title{
@@ -472,7 +471,7 @@ textarea{
 
 .export-strip-cell{
   flex:1;
-  height:78px;
+  height:92px;
   min-width:0;
   display:flex;
   flex-direction:column;
@@ -493,7 +492,7 @@ textarea{
 
 .export-strip-cell span{
   position:absolute;
-  top:92px;
+  top:102px;
   left:50%;
   transform:translateX(-50%) rotate(-18deg);
   font-size:16px;
