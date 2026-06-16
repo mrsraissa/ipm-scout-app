@@ -1106,6 +1106,13 @@ function downloadGrowersReport() {
     useCORS: true,
     allowTaint: true
   }).then(canvas => {
+        const link = document.createElement("a");
+    link.download = "Growers_Weekly_Report.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+
+  });
+}
 
   
 function downloadHeatMap() {
