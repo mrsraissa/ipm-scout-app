@@ -959,14 +959,136 @@ function renderReportsPage() {
 }
 
   function renderGrowersReport(data) {
+  if (!data || !data.success) {
+    document.getElementById("growersReportPreview").innerHTML =
+      `<div class="dashboard-card">Could not load report data.</div>`;
+    return;
+  }
 
-  document.getElementById("growersReportPreview").innerHTML = `
-    <div class="dashboard-card">
-      Report Preview Coming Next Step
+  const fungusData = data.fungusGnatsBySection || {};
+  const bayCounts = data.bayCounts || {};
+
+  const thripsHotspots = buildHotspotsFromBayCounts(bayCounts, "Thrips", 15);
+  const whitefliesHotspots = buildHotspotsFromBayCounts(bayCounts, "Whiteflies", 5);
+  const aphidsHotspots = buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
+
+  let html = `
+    <button class="download-btn" onclick="downloadGrowersReport()">
+      Download Growers Weekly Report PNG
+    </button>
+
+    <div id="growersReportExport" class="growers-report-export">
+      <div class="growers-left">
+  `;
+
+  html += `
+    <div class="export-strip-section">
+      <div class="export-strip-title">
+        <span>Fungus Gnats</span>
+        <em>Section Total Counts</em>
+      </div>
+      <div class="export-strip-row">
+  `;
+
+  sectionOrder.forEach(section => {
+    const value =
+      fungusData[section] && fungusData[section]["Fungus Gnats"]
+        ? fungusData[section]["Fungus Gnats"]
+        : 0;
+
+    const color = getFungusColor(value);
+    const textColor = getTextColor(color);
+
+    html += `
+      <div class="export-strip-cell" style="background:${color}; color:${textColor};">
+        <strong>${value}</strong>
+        <span>${section}</span>
+      </div>
+    `;
+  });
+
+  html += `</div></div>`;
+
+  html += renderExportStrip(
+    "Thrips",
+    "Bays Above Threshold (≥15)",
+    thripsHotspots,
+    "Thrips",
+    10
+  );
+
+  html += renderExportStrip(
+    "Whiteflies",
+    "Bays Above Threshold (≥5)",
+    whitefliesHotspots,
+    "Whiteflies",
+    10
+  );
+
+  html += renderExportStrip(
+    "Aphids",
+    "Bays Above Threshold (≥5)",
+    aphidsHotspots,
+    "Aphids",
+    10
+  );
+
+  html += `
+      </div>
+
+      <div class="growers-right">
+        <h3>Key Insights</h3>
+
+        <div class="insight-block">
+          <strong>Thrips</strong>
+          <p>${getInsightText("Thrips", thripsHotspots)}</p>
+        </div>
+
+        <div class="insight-block">
+          <strong>Whiteflies</strong>
+          <p>${getInsightText("Whiteflies", whitefliesHotspots)}</p>
+        </div>
+
+        <div class="insight-block">
+          <strong>Aphids</strong>
+          <p>${getInsightText("Aphids", aphidsHotspots)}</p>
+        </div>
+
+        <div class="insight-block">
+          <strong>Focus Areas</strong>
+          <p>Prioritize bays with the highest counts and continue weekly monitoring.</p>
+        </div>
+      </div>
     </div>
   `;
 
+  document.getElementById("growersReportPreview").innerHTML = html;
 }
+function getInsightText(pest, hotspots) {
+  if (!hotspots || hotspots.length === 0) {
+    return "No bays above threshold this week.";
+  }
+
+  const top = hotspots.slice(0, 3).map(item => `${item.label} (${item.count})`);
+
+  return `${hotspots.length} bays above threshold. Highest pressure: ${top.join(", ")}.`;
+}
+
+function downloadGrowersReport() {
+  const element = document.getElementById("growersReportExport");
+
+  html2canvas(element, {
+    backgroundColor: null,
+    scale: 2
+  }).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "Growers_Weekly_IPM_Report.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  });
+}
+
+  
 function downloadHeatMap() {
   const element = document.getElementById("heatMapExport");
 
