@@ -611,9 +611,10 @@ textarea{
 
 .growers-slide-body{
   display:grid;
-  grid-template-columns:1fr 410px;
+  grid-template-columns:minmax(0,1fr) 410px;
   gap:20px;
   height:930px;
+  width:100%;
 }
 
 .growers-hotspots-box{
@@ -720,7 +721,22 @@ textarea{
 .growers-icon-aphids{ background:#e8d475; }
 .growers-icon-whiteflies{ background:#8a6240; }
 
+.growers-slide-report{
+  width:1920px;
+  height:1080px;
+  background:white;
+  padding:30px 40px;
+  box-sizing:border-box;
+}
 
+.growers-hotspots-box{
+  width:100%;
+  min-width:0;
+}
+
+.growers-heatmap-area{
+  width:100%;
+}
 
 /* Mobile */
 
