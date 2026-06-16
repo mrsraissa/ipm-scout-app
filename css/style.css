@@ -429,7 +429,7 @@ textarea{
 }
 
 .export-strip-section{
-  margin-bottom:80px;
+  margin-bottom:95px;
 }
 
 .export-strip-title{
@@ -455,7 +455,7 @@ textarea{
 .export-strip-row{
   display:flex;
   width:100%;
-  border:1px solid #94a3b8;
+  border:none;
   border-radius:10px;
   overflow:hidden;
   margin-bottom:52px;
@@ -471,7 +471,7 @@ textarea{
   align-items:center;
   position:relative;
   font-weight:900;
-  border-right:1px solid rgba(0,0,0,0.08);
+  border-right:1px solid rgba(0,0,0,0.05);
 }
 
 .export-strip-cell:last-child{
