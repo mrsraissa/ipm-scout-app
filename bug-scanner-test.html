@@ -112,16 +112,24 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
           const boxH = comp.maxY - comp.minY + 1;
 
           // Keep insect-size blobs only
-          if (
-            comp.count >= 8 &&
-            comp.count <= 800 &&
-            boxW >= 2 &&
-            boxH >= 2 &&
-            boxW <= 60 &&
-            boxH <= 60
-          ) {
-            components.push(comp);
-          }
+       // Ignore grid lines
+if (
+    (boxW > 25 && boxH < 8) ||
+    (boxH > 25 && boxW < 8)
+) {
+    continue;
+}
+
+if (
+    comp.count >= 8 &&
+    comp.count <= 800 &&
+    boxW >= 2 &&
+    boxH >= 2 &&
+    boxW <= 60 &&
+    boxH <= 60
+) {
+    components.push(comp);
+}
         }
       }
     }
