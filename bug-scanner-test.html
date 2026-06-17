@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bug Scanner Test</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    canvas { max-width: 100%; border: 1px solid #ccc; margin-top: 15px; }
+    .result { font-size: 22px; font-weight: bold; color: #065f46; margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+<h2>Bug Scanner Test</h2>
+
+<input type="file" accept="image/*" id="photoInput">
+
+<canvas id="canvas"></canvas>
+
+<div class="result" id="result">Upload a sticky card photo.</div>
+
+<script>
+document.getElementById("photoInput").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const img = new Image();
+  img.onload = function() {
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const maxWidth = 900;
+    const scale = Math.min(maxWidth / img.width, 1);
+
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    let darkPixels = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      // Detect dark insects on yellow card
+      const brightness = (r + g + b) / 3;
+
+      // Ignore very bright yellow background
+      if (brightness < 90) {
+        darkPixels++;
+      }
+    }
+
+    // Rough estimate: one insect body = about 80 dark pixels
+    const estimatedBugs = Math.round(darkPixels / 80);
+
+    document.getElementById("result").innerText =
+      "Estimated insects: " + estimatedBugs;
+  };
+
+  img.src = URL.createObjectURL(file);
+});
+</script>
+
+</body>
+</html>
