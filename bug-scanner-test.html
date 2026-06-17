@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bug Scanner Test V2</title>
+  <title>Bug Scanner Test V4</title>
   <style>
     body { font-family: Arial; padding: 20px; background:#f3f4f6; }
     .card { background:white; padding:20px; border-radius:14px; max-width:1100px; margin:auto; }
@@ -12,7 +12,7 @@
 <body>
 
 <div class="card">
-  <h2>Bug Scanner Test V3 - RAISSA TEST</h2>
+  <h2>Bug Scanner Test V4 - Grid Removed</h2>
   <input type="file" accept="image/*" id="photoInput">
   <div class="result" id="result">Upload a sticky card photo.</div>
   <canvas id="canvas"></canvas>
@@ -44,11 +44,37 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
 
     const mask = new Uint8Array(w * h);
 
-    // Ignore top 12% because of logo/text
     const ignoreTop = Math.round(h * 0.12);
+    const gridThickness = 8;
+
+    const verticalLines = [
+      Math.round(w * 0.27),
+      Math.round(w * 0.53),
+      Math.round(w * 0.79)
+    ];
+
+    const horizontalLines = [
+      Math.round(h * 0.28),
+      Math.round(h * 0.50),
+      Math.round(h * 0.72),
+      Math.round(h * 0.94)
+    ];
 
     for (let y = ignoreTop; y < h; y++) {
       for (let x = 0; x < w; x++) {
+
+        let onGrid = false;
+
+        for (const gx of verticalLines) {
+          if (Math.abs(x - gx) < gridThickness) onGrid = true;
+        }
+
+        for (const gy of horizontalLines) {
+          if (Math.abs(y - gy) < gridThickness) onGrid = true;
+        }
+
+        if (onGrid) continue;
+
         const idx = (y * w + x) * 4;
         const r = data[idx];
         const g = data[idx + 1];
@@ -56,7 +82,6 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
 
         const brightness = (r + g + b) / 3;
 
-        // Detect dark objects, but avoid medium-gray printed areas
         if (
           brightness < 95 &&
           !(r > 120 && g > 120 && b > 120)
@@ -95,6 +120,7 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
           if (nx < 0 || nx >= w || ny < ignoreTop || ny >= h) continue;
 
           const pos = ny * w + nx;
+
           if (mask[pos] === 1 && visited[pos] === 0) {
             visited[pos] = 1;
             stack.push([nx, ny]);
@@ -116,10 +142,8 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
           const boxH = comp.maxY - comp.minY + 1;
           const aspectRatio = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
 
-          // Ignore long skinny pieces, usually grid lines
           if (aspectRatio > 6) continue;
 
-          // Ignore grid-line fragments
           if (
             (boxW > 25 && boxH < 8) ||
             (boxH > 25 && boxW < 8)
@@ -127,7 +151,6 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
             continue;
           }
 
-          // Keep insect-size blobs only
           if (
             comp.count >= 8 &&
             comp.count <= 800 &&
