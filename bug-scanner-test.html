@@ -56,13 +56,13 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
 
         const brightness = (r + g + b) / 3;
 
-        // Dark object detection
+        // Detect dark objects, but avoid medium-gray printed areas
         if (
-    brightness < 95 &&
-    !(r > 120 && g > 120 && b > 120)
-) {
-    mask[y * w + x] = 1;
-}
+          brightness < 95 &&
+          !(r > 120 && g > 120 && b > 120)
+        ) {
+          mask[y * w + x] = 1;
+        }
       }
     }
 
@@ -108,6 +108,7 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
     for (let y = ignoreTop; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const pos = y * w + x;
+
         if (mask[pos] === 1 && visited[pos] === 0) {
           const comp = floodFill(x, y);
 
@@ -115,25 +116,28 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
           const boxH = comp.maxY - comp.minY + 1;
           const aspectRatio = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
 
-          // Keep insect-size blobs only
-       // Ignore grid lines
-if (
-    (boxW > 25 && boxH < 8) ||
-    (boxH > 25 && boxW < 8)
-) {
-    continue;
-}
+          // Ignore long skinny pieces, usually grid lines
+          if (aspectRatio > 6) continue;
 
-if (
-    comp.count >= 8 &&
-    comp.count <= 800 &&
-    boxW >= 2 &&
-    boxH >= 2 &&
-    boxW <= 60 &&
-    boxH <= 60
-) {
-    components.push(comp);
-}
+          // Ignore grid-line fragments
+          if (
+            (boxW > 25 && boxH < 8) ||
+            (boxH > 25 && boxW < 8)
+          ) {
+            continue;
+          }
+
+          // Keep insect-size blobs only
+          if (
+            comp.count >= 8 &&
+            comp.count <= 800 &&
+            boxW >= 2 &&
+            boxH >= 2 &&
+            boxW <= 60 &&
+            boxH <= 60
+          ) {
+            components.push(comp);
+          }
         }
       }
     }
