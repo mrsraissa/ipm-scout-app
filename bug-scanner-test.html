@@ -57,9 +57,12 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
         const brightness = (r + g + b) / 3;
 
         // Dark object detection
-        if (brightness < 95) {
-          mask[y * w + x] = 1;
-        }
+        if (
+    brightness < 95 &&
+    !(r > 120 && g > 120 && b > 120)
+) {
+    mask[y * w + x] = 1;
+}
       }
     }
 
@@ -110,6 +113,7 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
 
           const boxW = comp.maxX - comp.minX + 1;
           const boxH = comp.maxY - comp.minY + 1;
+          const aspectRatio = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
 
           // Keep insect-size blobs only
        // Ignore grid lines
