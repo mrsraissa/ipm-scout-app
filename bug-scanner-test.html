@@ -142,7 +142,10 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
           const boxH = comp.maxY - comp.minY + 1;
           const aspectRatio = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
 
-          if (aspectRatio > 6) continue;
+          if (aspectRatio > 4) continue;
+          const area = boxW * boxH;
+
+if (area < 80) continue;
 
           if (
             (boxW > 25 && boxH < 8) ||
@@ -152,7 +155,7 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
           }
 
           if (
-            comp.count >= 8 &&
+            comp.count >= 80 &&
             comp.count <= 800 &&
             boxW >= 8 &&
             boxH >= 8 &&
