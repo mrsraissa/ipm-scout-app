@@ -80,18 +80,21 @@ const r = data[idx];
 const g = data[idx + 1];
 const b = data[idx + 2];
 
+const brightness = (r + g + b) / 3;
+const maxRGB = Math.max(r, g, b);
+const minRGB = Math.min(r, g, b);
+
 // Remove gray grid lines
 const isGridPixel =
-  r > 70 && r < 150 &&
-  g > 70 && g < 150 &&
-  b > 70 && b < 150;
+  brightness > 40 &&
+  brightness < 130 &&
+  (maxRGB - minRGB) < 25;
 
 if (isGridPixel) {
   continue;
 }
 
-const brightness = (r + g + b) / 3;
-
+// Detect dark insects
 if (
   brightness < 95 &&
   !(r > 120 && g > 120 && b > 120)
