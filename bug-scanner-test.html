@@ -73,21 +73,31 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
           if (Math.abs(y - gy) < gridThickness) onGrid = true;
         }
 
-        if (onGrid) continue;
+        // if (onGrid) continue;
 
         const idx = (y * w + x) * 4;
-        const r = data[idx];
-        const g = data[idx + 1];
-        const b = data[idx + 2];
+const r = data[idx];
+const g = data[idx + 1];
+const b = data[idx + 2];
 
-        const brightness = (r + g + b) / 3;
+// Remove gray grid lines
+const isGridPixel =
+  r > 70 && r < 150 &&
+  g > 70 && g < 150 &&
+  b > 70 && b < 150;
 
-        if (
-          brightness < 95 &&
-          !(r > 120 && g > 120 && b > 120)
-        ) {
-          mask[y * w + x] = 1;
-        }
+if (isGridPixel) {
+  continue;
+}
+
+const brightness = (r + g + b) / 3;
+
+if (
+  brightness < 95 &&
+  !(r > 120 && g > 120 && b > 120)
+) {
+  mask[y * w + x] = 1;
+}
       }
     }
 
