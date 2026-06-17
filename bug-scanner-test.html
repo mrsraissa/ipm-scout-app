@@ -50,13 +50,13 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
       const brightness = (r + g + b) / 3;
 
       // Ignore very bright yellow background
-      if (brightness < 90) {
+      if (brightness < 65) {
         darkPixels++;
       }
     }
 
     // Rough estimate: one insect body = about 80 dark pixels
-    const estimatedBugs = Math.round(darkPixels / 80);
+    const estimatedBugs = Math.round(darkPixels / 120);
 
     document.getElementById("result").innerText =
       "Estimated insects: " + estimatedBugs;
