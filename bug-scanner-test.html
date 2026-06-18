@@ -1,329 +1,48 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Bug Scanner Test V8</title>
-  <style>
-    body { font-family: Arial; padding: 20px; background:#f3f4f6; }
-    .card { background:white; padding:20px; border-radius:14px; max-width:1200px; margin:auto; }
-    canvas { max-width:100%; border:1px solid #ccc; margin-top:15px; }
-    .result { font-size:24px; font-weight:bold; color:#065f46; margin-top:15px; }
-    table { border-collapse:collapse; margin-top:20px; width:100%; font-size:13px; }
-    th, td { border:1px solid #ddd; padding:6px; text-align:center; }
-    th { background:#065f46; color:white; }
-  </style>
-</head>
-<body>
+objects.forEach(o => {
 
-<div class="card">
-  <h2>Bug Scanner Test V8 - Row/Column Grid Detection</h2>
-  <input type="file" accept="image/*" id="photoInput">
-  <div class="result" id="result">Upload a sticky card photo.</div>
-  <canvas id="canvas"></canvas>
-  <div id="tableContainer"></div>
-</div>
+  const onGridX =
+    gridXLines.some(x => Math.abs(o.centerX - x) <= 10);
 
-<script>
-document.getElementById("photoInput").addEventListener("change", function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+  const onGridY =
+    gridYLines.some(y => Math.abs(o.centerY - y) <= 10);
 
-  const img = new Image();
+  const gridLikeSize =
+    (
+      o.boxW >= 14 &&
+      o.boxW <= 30 &&
+      o.boxH >= 2 &&
+      o.boxH <= 12
+    ) ||
+    (
+      o.boxH >= 14 &&
+      o.boxH <= 30 &&
+      o.boxW >= 2 &&
+      o.boxW <= 12
+    );
 
-  img.onload = function() {
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+  const verySolid = o.fillRatio > 0.70;
+  const verySmall = o.pixels < 30;
 
-    const maxWidth = 1000;
-    const scale = Math.min(maxWidth / img.width, 1);
+  // NEW: detect intersections
+  const isIntersection =
+    onGridX &&
+    onGridY;
 
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
+  if (
+    isIntersection ||
+    (
+      (onGridX || onGridY) &&
+      (
+        gridLikeSize ||
+        verySolid ||
+        verySmall
+      )
+    )
+  ) {
+    o.isGrid = true;
+    o.reason = isIntersection
+      ? "grid intersection"
+      : "grid line pattern";
+  }
 
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    const w = canvas.width;
-    const h = canvas.height;
-
-    const mask = new Uint8Array(w * h);
-    const ignoreTop = Math.round(h * 0.08);
-
-    for (let y = ignoreTop; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const idx = (y * w + x) * 4;
-        const r = data[idx];
-        const g = data[idx + 1];
-        const b = data[idx + 2];
-
-        const brightness = (r + g + b) / 3;
-
-        if (brightness < 115) {
-          mask[y * w + x] = 1;
-        }
-      }
-    }
-
-    const visited = new Uint8Array(w * h);
-    let objects = [];
-
-    function floodFill(startX, startY) {
-      const stack = [[startX, startY]];
-      let pixels = 0;
-      let minX = startX, maxX = startX;
-      let minY = startY, maxY = startY;
-
-      visited[startY * w + startX] = 1;
-
-      while (stack.length) {
-        const [x, y] = stack.pop();
-        pixels++;
-
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-
-        const neighbors = [
-          [x + 1, y], [x - 1, y],
-          [x, y + 1], [x, y - 1]
-        ];
-
-        for (const [nx, ny] of neighbors) {
-          if (nx < 0 || nx >= w || ny < ignoreTop || ny >= h) continue;
-
-          const pos = ny * w + nx;
-
-          if (mask[pos] === 1 && visited[pos] === 0) {
-            visited[pos] = 1;
-            stack.push([nx, ny]);
-          }
-        }
-      }
-
-      return { pixels, minX, maxX, minY, maxY };
-    }
-
-    for (let y = ignoreTop; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const pos = y * w + x;
-
-        if (mask[pos] === 1 && visited[pos] === 0) {
-          const obj = floodFill(x, y);
-
-          const boxW = obj.maxX - obj.minX + 1;
-          const boxH = obj.maxY - obj.minY + 1;
-          const area = boxW * boxH;
-          const aspectRatio = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
-          const fillRatio = obj.pixels / area;
-          const centerX = (obj.minX + obj.maxX) / 2;
-          const centerY = (obj.minY + obj.maxY) / 2;
-
-          if (
-            obj.pixels >= 5 &&
-            boxW >= 2 &&
-            boxH >= 2 &&
-            boxW <= 130 &&
-            boxH <= 130
-          ) {
-            objects.push({
-              id: objects.length + 1,
-              pixels: obj.pixels,
-              boxW,
-              boxH,
-              area,
-              aspectRatio,
-              fillRatio,
-              centerX,
-              centerY,
-              minX: obj.minX,
-              minY: obj.minY,
-              maxX: obj.maxX,
-              maxY: obj.maxY,
-              isGrid: false,
-              reason: ""
-            });
-          }
-        }
-      }
-    }
-
-    // Find dense vertical and horizontal alignment lines
-    const xTolerance = 8;
-    const yTolerance = 8;
-    const minObjectsOnLine = 8;
-
-    const xLines = [];
-    const yLines = [];
-
-    objects.forEach(o => {
-      let xCount = 0;
-      let yCount = 0;
-
-      objects.forEach(other => {
-        if (Math.abs(o.centerX - other.centerX) <= xTolerance) xCount++;
-        if (Math.abs(o.centerY - other.centerY) <= yTolerance) yCount++;
-      });
-
-      if (xCount >= minObjectsOnLine) {
-        xLines.push(o.centerX);
-      }
-
-      if (yCount >= minObjectsOnLine) {
-        yLines.push(o.centerY);
-      }
-    });
-
-    function mergeLines(lines, tolerance) {
-      const sorted = [...lines].sort((a,b) => a - b);
-      const merged = [];
-
-      sorted.forEach(value => {
-        if (merged.length === 0) {
-          merged.push({ sum:value, count:1, value:value });
-        } else {
-          const last = merged[merged.length - 1];
-          if (Math.abs(value - last.value) <= tolerance) {
-            last.sum += value;
-            last.count++;
-            last.value = last.sum / last.count;
-          } else {
-            merged.push({ sum:value, count:1, value:value });
-          }
-        }
-      });
-
-      return merged.map(m => m.value);
-    }
-
-    const gridXLines = mergeLines(xLines, 15);
-    const gridYLines = mergeLines(yLines, 15);
-
-    // Mark objects as grid if their centers sit on detected grid rows/columns
-    objects.forEach(o => {
-      const onGridX = gridXLines.some(x => Math.abs(o.centerX - x) <= 10);
-      const onGridY = gridYLines.some(y => Math.abs(o.centerY - y) <= 10);
-
-      const gridLikeSize =
-        (
-          o.boxW >= 14 && o.boxW <= 30 &&
-          o.boxH >= 2 && o.boxH <= 12
-        ) ||
-        (
-          o.boxH >= 14 && o.boxH <= 30 &&
-          o.boxW >= 2 && o.boxW <= 12
-        );
-
-      const verySolid = o.fillRatio > 0.70;
-      const verySmall = o.pixels < 30;
-
-      if ((onGridX || onGridY) && (gridLikeSize || verySolid || verySmall)) {
-        o.isGrid = true;
-        o.reason = "grid line pattern";
-      }
-    });
-
-    // Insect candidate after grid removal
-    const finalObjects = objects.filter(o => {
-      if (o.isGrid) return false;
-
-      const validSize =
-        o.pixels >= 40 &&
-        o.pixels <= 1600 &&
-        o.area >= 50 &&
-        o.boxW >= 3 &&
-        o.boxH >= 3 &&
-        o.boxW <= 100 &&
-        o.boxH <= 100;
-
-      const notLogoOrEdge =
-        o.minY > ignoreTop + 10 &&
-        o.minX > 5 &&
-        o.maxX < w - 5;
-
-      return validSize && notLogoOrEdge;
-    });
-
-    ctx.lineWidth = 2;
-    ctx.font = "12px Arial";
-
-    objects.forEach(o => {
-      if (o.isGrid) {
-        ctx.strokeStyle = "blue";
-        ctx.fillStyle = "blue";
-      } else if (finalObjects.includes(o)) {
-        ctx.strokeStyle = "red";
-        ctx.fillStyle = "red";
-      } else {
-        ctx.strokeStyle = "gray";
-        ctx.fillStyle = "gray";
-      }
-
-      ctx.strokeRect(o.minX, o.minY, o.boxW, o.boxH);
-      ctx.fillText(o.id, o.minX, o.minY - 2);
-    });
-
-    document.getElementById("result").innerText =
-      "Detected insect-like objects: " + finalObjects.length +
-      " | Grid objects removed: " + objects.filter(o => o.isGrid).length +
-      " | Grid rows: " + gridYLines.length +
-      " | Grid columns: " + gridXLines.length;
-
-    showTable(objects, finalObjects);
-  };
-
-  img.src = URL.createObjectURL(file);
 });
-
-function guessType(o, finalObjects) {
-  if (o.isGrid) return "grid removed";
-  if (finalObjects.includes(o)) return "possible insect";
-  return "ignored";
-}
-
-function showTable(objects, finalObjects) {
-  let html = `
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Pixels</th>
-          <th>Width</th>
-          <th>Height</th>
-          <th>Area</th>
-          <th>Aspect Ratio</th>
-          <th>Fill Ratio</th>
-          <th>Grid?</th>
-          <th>Guess</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
-  objects.slice(0, 300).forEach(o => {
-    html += `
-      <tr>
-        <td>${o.id}</td>
-        <td>${o.pixels}</td>
-        <td>${o.boxW}</td>
-        <td>${o.boxH}</td>
-        <td>${o.area}</td>
-        <td>${o.aspectRatio.toFixed(2)}</td>
-        <td>${o.fillRatio.toFixed(2)}</td>
-        <td>${o.isGrid ? "YES" : "NO"}</td>
-        <td>${guessType(o, finalObjects)}</td>
-      </tr>
-    `;
-  });
-
-  html += `
-      </tbody>
-    </table>
-  `;
-
-  document.getElementById("tableContainer").innerHTML = html;
-}
-</script>
-
-</body>
-</html>
