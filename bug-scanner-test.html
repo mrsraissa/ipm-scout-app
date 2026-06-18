@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bug Scanner Test V6</title>
+  <title>Bug Scanner Test V7</title>
   <style>
     body { font-family: Arial; padding: 20px; background:#f3f4f6; }
     .card { background:white; padding:20px; border-radius:14px; max-width:1200px; margin:auto; }
@@ -15,14 +15,10 @@
 <body>
 
 <div class="card">
-  <h2>Bug Scanner Test V6 - Object Debug Mode</h2>
-
+  <h2>Bug Scanner Test V7 - Pattern Grid Removal</h2>
   <input type="file" accept="image/*" id="photoInput">
-
   <div class="result" id="result">Upload a sticky card photo.</div>
-
   <canvas id="canvas"></canvas>
-
   <div id="tableContainer"></div>
 </div>
 
@@ -51,7 +47,6 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
     const h = canvas.height;
 
     const mask = new Uint8Array(w * h);
-
     const ignoreTop = Math.round(h * 0.08);
 
     for (let y = ignoreTop; y < h; y++) {
@@ -64,7 +59,7 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
 
         const brightness = (r + g + b) / 3;
 
-        // Broad detection: find all dark objects first
+        // Detect all dark objects first
         if (brightness < 115) {
           mask[y * w + x] = 1;
         }
@@ -72,7 +67,7 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
     }
 
     const visited = new Uint8Array(w * h);
-    const objects = [];
+    let objects = [];
 
     function floodFill(startX, startY) {
       const stack = [[startX, startY]];
@@ -123,8 +118,9 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
           const area = boxW * boxH;
           const aspectRatio = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
           const fillRatio = obj.pixels / area;
+          const centerX = (obj.minX + obj.maxX) / 2;
+          const centerY = (obj.minY + obj.maxY) / 2;
 
-          // Ignore very tiny noise only
           if (
             obj.pixels >= 5 &&
             boxW >= 2 &&
@@ -140,28 +136,67 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
               area,
               aspectRatio,
               fillRatio,
+              centerX,
+              centerY,
               minX: obj.minX,
               minY: obj.minY,
               maxX: obj.maxX,
-              maxY: obj.maxY
+              maxY: obj.maxY,
+              isGrid: false
             });
           }
         }
       }
     }
 
+    // Detect repeated grid pattern
+    objects.forEach((obj, i) => {
+      let alignedNeighbors = 0;
+
+      objects.forEach((other, j) => {
+        if (i === j) return;
+
+        const dx = Math.abs(obj.centerX - other.centerX);
+        const dy = Math.abs(obj.centerY - other.centerY);
+
+        const sameVerticalLine = dx < 12 && dy > 8;
+        const sameHorizontalLine = dy < 12 && dx > 8;
+
+        const similarDashSize =
+          Math.abs(obj.boxW - other.boxW) <= 10 &&
+          Math.abs(obj.boxH - other.boxH) <= 10;
+
+        if ((sameVerticalLine || sameHorizontalLine) && similarDashSize) {
+          alignedNeighbors++;
+        }
+      });
+
+      if (alignedNeighbors >= 3) {
+        obj.isGrid = true;
+      }
+    });
+
+    const finalObjects = objects.filter(o => !o.isGrid);
+
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "red";
     ctx.font = "12px Arial";
-    ctx.fillStyle = "red";
 
     objects.forEach(o => {
+      if (o.isGrid) {
+        ctx.strokeStyle = "blue";
+        ctx.fillStyle = "blue";
+      } else {
+        ctx.strokeStyle = "red";
+        ctx.fillStyle = "red";
+      }
+
       ctx.strokeRect(o.minX, o.minY, o.boxW, o.boxH);
       ctx.fillText(o.id, o.minX, o.minY - 2);
     });
 
     document.getElementById("result").innerText =
-      "Detected dark objects: " + objects.length;
+      "Detected insect-like objects: " + finalObjects.length +
+      " | Grid objects removed: " + (objects.length - finalObjects.length);
 
     showTable(objects);
   };
@@ -170,8 +205,8 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
 });
 
 function guessType(o) {
-  if (o.aspectRatio > 3.5 && o.pixels < 80) return "possible grid dash / thrips";
-  if (o.fillRatio > 0.55 && o.aspectRatio < 2.2) return "possible dirt/grid intersection";
+  if (o.isGrid) return "grid removed";
+  if (o.aspectRatio > 3.5 && o.pixels < 80) return "possible thrips";
   if (o.pixels > 80 && o.aspectRatio < 4) return "possible insect";
   return "unknown";
 }
@@ -188,6 +223,7 @@ function showTable(objects) {
           <th>Area</th>
           <th>Aspect Ratio</th>
           <th>Fill Ratio</th>
+          <th>Grid?</th>
           <th>Guess</th>
         </tr>
       </thead>
@@ -204,6 +240,7 @@ function showTable(objects) {
         <td>${o.area}</td>
         <td>${o.aspectRatio.toFixed(2)}</td>
         <td>${o.fillRatio.toFixed(2)}</td>
+        <td>${o.isGrid ? "YES" : "NO"}</td>
         <td>${guessType(o)}</td>
       </tr>
     `;
