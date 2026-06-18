@@ -1,201 +1,220 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bug Scanner Test V5</title>
+  <title>Bug Scanner Test V6</title>
   <style>
     body { font-family: Arial; padding: 20px; background:#f3f4f6; }
-    .card { background:white; padding:20px; border-radius:14px; max-width:1100px; margin:auto; }
+    .card { background:white; padding:20px; border-radius:14px; max-width:1200px; margin:auto; }
     canvas { max-width:100%; border:1px solid #ccc; margin-top:15px; }
     .result { font-size:24px; font-weight:bold; color:#065f46; margin-top:15px; }
-    label { font-weight:bold; display:block; margin-top:12px; }
+    table { border-collapse:collapse; margin-top:20px; width:100%; font-size:13px; }
+    th, td { border:1px solid #ddd; padding:6px; text-align:center; }
+    th { background:#065f46; color:white; }
   </style>
 </head>
 <body>
 
 <div class="card">
-  <h2>Bug Scanner Test V5 - Background Comparison</h2>
+  <h2>Bug Scanner Test V6 - Object Debug Mode</h2>
 
-  <label>1. Upload blank/reference card</label>
-  <input type="file" accept="image/*" id="blankInput">
+  <input type="file" accept="image/*" id="photoInput">
 
-  <label>2. Upload scout card with insects</label>
-  <input type="file" accept="image/*" id="bugInput">
+  <div class="result" id="result">Upload a sticky card photo.</div>
 
-  <div class="result" id="result">Upload both images.</div>
   <canvas id="canvas"></canvas>
+
+  <div id="tableContainer"></div>
 </div>
 
 <script>
-let blankImg = null;
-let bugImg = null;
-
-document.getElementById("blankInput").addEventListener("change", e => {
-  loadImage(e.target.files[0], img => {
-    blankImg = img;
-    runScanner();
-  });
-});
-
-document.getElementById("bugInput").addEventListener("change", e => {
-  loadImage(e.target.files[0], img => {
-    bugImg = img;
-    runScanner();
-  });
-});
-
-function loadImage(file, callback) {
+document.getElementById("photoInput").addEventListener("change", function(e) {
+  const file = e.target.files[0];
   if (!file) return;
+
   const img = new Image();
-  img.onload = () => callback(img);
-  img.src = URL.createObjectURL(file);
-}
 
-function runScanner() {
-  if (!blankImg || !bugImg) return;
+  img.onload = function() {
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
 
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
+    const maxWidth = 1000;
+    const scale = Math.min(maxWidth / img.width, 1);
 
-  const w = 900;
-  const h = Math.round(w * bugImg.height / bugImg.width);
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
 
-  canvas.width = w;
-  canvas.height = h;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-  const blankCanvas = document.createElement("canvas");
-  const bugCanvas = document.createElement("canvas");
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const w = canvas.width;
+    const h = canvas.height;
 
-  blankCanvas.width = w;
-  blankCanvas.height = h;
-  bugCanvas.width = w;
-  bugCanvas.height = h;
+    const mask = new Uint8Array(w * h);
 
-  const blankCtx = blankCanvas.getContext("2d");
-  const bugCtx = bugCanvas.getContext("2d");
+    const ignoreTop = Math.round(h * 0.08);
 
-  blankCtx.drawImage(blankImg, 0, 0, w, h);
-  bugCtx.drawImage(bugImg, 0, 0, w, h);
+    for (let y = ignoreTop; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
 
-  const blankData = blankCtx.getImageData(0, 0, w, h);
-  const bugData = bugCtx.getImageData(0, 0, w, h);
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
 
-  const mask = new Uint8Array(w * h);
+        const brightness = (r + g + b) / 3;
 
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4;
-
-      const br = blankData.data[i];
-      const bg = blankData.data[i + 1];
-      const bb = blankData.data[i + 2];
-
-      const r = bugData.data[i];
-      const g = bugData.data[i + 1];
-      const b = bugData.data[i + 2];
-
-      const blankBrightness = (br + bg + bb) / 3;
-      const bugBrightness = (r + g + b) / 3;
-
-      const difference =
-        Math.abs(r - br) +
-        Math.abs(g - bg) +
-        Math.abs(b - bb);
-
-      // New dark object compared with blank card
-      if (
-        difference > 70 &&
-        bugBrightness < blankBrightness - 20 &&
-        bugBrightness < 150
-      ) {
-        mask[y * w + x] = 1;
+        // Broad detection: find all dark objects first
+        if (brightness < 115) {
+          mask[y * w + x] = 1;
+        }
       }
     }
-  }
 
-  const visited = new Uint8Array(w * h);
-  const components = [];
+    const visited = new Uint8Array(w * h);
+    const objects = [];
 
-  function floodFill(startX, startY) {
-    const stack = [[startX, startY]];
-    let count = 0;
-    let minX = startX, maxX = startX;
-    let minY = startY, maxY = startY;
+    function floodFill(startX, startY) {
+      const stack = [[startX, startY]];
+      let pixels = 0;
+      let minX = startX, maxX = startX;
+      let minY = startY, maxY = startY;
 
-    visited[startY * w + startX] = 1;
+      visited[startY * w + startX] = 1;
 
-    while (stack.length) {
-      const [x, y] = stack.pop();
-      count++;
+      while (stack.length) {
+        const [x, y] = stack.pop();
+        pixels++;
 
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y);
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
 
-      const neighbors = [
-        [x + 1, y], [x - 1, y],
-        [x, y + 1], [x, y - 1]
-      ];
+        const neighbors = [
+          [x + 1, y], [x - 1, y],
+          [x, y + 1], [x, y - 1]
+        ];
 
-      for (const [nx, ny] of neighbors) {
-        if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+        for (const [nx, ny] of neighbors) {
+          if (nx < 0 || nx >= w || ny < ignoreTop || ny >= h) continue;
 
-        const pos = ny * w + nx;
+          const pos = ny * w + nx;
+
+          if (mask[pos] === 1 && visited[pos] === 0) {
+            visited[pos] = 1;
+            stack.push([nx, ny]);
+          }
+        }
+      }
+
+      return { pixels, minX, maxX, minY, maxY };
+    }
+
+    for (let y = ignoreTop; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const pos = y * w + x;
 
         if (mask[pos] === 1 && visited[pos] === 0) {
-          visited[pos] = 1;
-          stack.push([nx, ny]);
+          const obj = floodFill(x, y);
+
+          const boxW = obj.maxX - obj.minX + 1;
+          const boxH = obj.maxY - obj.minY + 1;
+          const area = boxW * boxH;
+          const aspectRatio = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
+          const fillRatio = obj.pixels / area;
+
+          // Ignore very tiny noise only
+          if (
+            obj.pixels >= 5 &&
+            boxW >= 2 &&
+            boxH >= 2 &&
+            boxW <= 120 &&
+            boxH <= 120
+          ) {
+            objects.push({
+              id: objects.length + 1,
+              pixels: obj.pixels,
+              boxW,
+              boxH,
+              area,
+              aspectRatio,
+              fillRatio,
+              minX: obj.minX,
+              minY: obj.minY,
+              maxX: obj.maxX,
+              maxY: obj.maxY
+            });
+          }
         }
       }
     }
 
-    return { count, minX, maxX, minY, maxY };
-  }
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "red";
+    ctx.font = "12px Arial";
+    ctx.fillStyle = "red";
 
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const pos = y * w + x;
+    objects.forEach(o => {
+      ctx.strokeRect(o.minX, o.minY, o.boxW, o.boxH);
+      ctx.fillText(o.id, o.minX, o.minY - 2);
+    });
 
-      if (mask[pos] === 1 && visited[pos] === 0) {
-        const comp = floodFill(x, y);
+    document.getElementById("result").innerText =
+      "Detected dark objects: " + objects.length;
 
-        const boxW = comp.maxX - comp.minX + 1;
-        const boxH = comp.maxY - comp.minY + 1;
-        const area = boxW * boxH;
-        const aspectRatio = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
+    showTable(objects);
+  };
 
-        if (
-          comp.count >= 20 &&
-          comp.count <= 1200 &&
-          area >= 40 &&
-          boxW >= 3 &&
-          boxH >= 3 &&
-          boxW <= 80 &&
-          boxH <= 80 &&
-          aspectRatio <= 6
-        ) {
-          components.push(comp);
-        }
-      }
-    }
-  }
+  img.src = URL.createObjectURL(file);
+});
 
-  ctx.drawImage(bugImg, 0, 0, w, h);
+function guessType(o) {
+  if (o.aspectRatio > 3.5 && o.pixels < 80) return "possible grid dash / thrips";
+  if (o.fillRatio > 0.55 && o.aspectRatio < 2.2) return "possible dirt/grid intersection";
+  if (o.pixels > 80 && o.aspectRatio < 4) return "possible insect";
+  return "unknown";
+}
 
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "red";
+function showTable(objects) {
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Pixels</th>
+          <th>Width</th>
+          <th>Height</th>
+          <th>Area</th>
+          <th>Aspect Ratio</th>
+          <th>Fill Ratio</th>
+          <th>Guess</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
 
-  components.forEach(c => {
-    ctx.strokeRect(
-      c.minX,
-      c.minY,
-      c.maxX - c.minX + 1,
-      c.maxY - c.minY + 1
-    );
+  objects.slice(0, 300).forEach(o => {
+    html += `
+      <tr>
+        <td>${o.id}</td>
+        <td>${o.pixels}</td>
+        <td>${o.boxW}</td>
+        <td>${o.boxH}</td>
+        <td>${o.area}</td>
+        <td>${o.aspectRatio.toFixed(2)}</td>
+        <td>${o.fillRatio.toFixed(2)}</td>
+        <td>${guessType(o)}</td>
+      </tr>
+    `;
   });
 
-  document.getElementById("result").innerText =
-    "Detected insect-like objects: " + components.length;
+  html += `
+      </tbody>
+    </table>
+  `;
+
+  document.getElementById("tableContainer").innerHTML = html;
 }
 </script>
 
