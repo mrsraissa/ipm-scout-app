@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bug Scanner Test V9</title>
+  <title>Bug Scanner Test V10</title>
   <style>
     body { font-family: Arial; padding: 20px; background:#f3f4f6; }
     .card { background:white; padding:20px; border-radius:14px; max-width:1200px; margin:auto; }
-    canvas { max-width:100%; border:1px solid #ccc; margin-top:15px; }
-    .result { font-size:24px; font-weight:bold; color:#065f46; margin-top:15px; }
+    canvas { max-width:100%; border:1px solid #ccc; margin-top:15px; display:block; }
+    .result { font-size:22px; font-weight:bold; color:#065f46; margin-top:15px; }
   </style>
 </head>
 <body>
 
 <div class="card">
-  <h2>Bug Scanner Test V9 - Paint Grid First</h2>
+  <h2>Bug Scanner Test V10 - Auto Crop + Straighten</h2>
   <input type="file" accept="image/*" id="photoInput">
   <div class="result" id="result">Upload a sticky card photo.</div>
   <canvas id="canvas"></canvas>
@@ -26,44 +26,65 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
   const img = new Image();
 
   img.onload = function() {
+    const outputW = 700;
+    const outputH = 1000;
+
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
+
+    canvas.width = outputW;
+    canvas.height = outputH;
+
+    const tempCanvas = document.createElement("canvas");
+    const tempCtx = tempCanvas.getContext("2d");
 
     const maxWidth = 1000;
     const scale = Math.min(maxWidth / img.width, 1);
 
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
+    tempCanvas.width = Math.round(img.width * scale);
+    tempCanvas.height = Math.round(img.height * scale);
 
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
     const data = imageData.data;
-    const w = canvas.width;
-    const h = canvas.height;
+    const w = tempCanvas.width;
+    const h = tempCanvas.height;
 
-    const ignoreTop = Math.round(h * 0.08);
+    const bounds = findYellowCardBounds(data, w, h);
 
-    // STEP 1: detect all dark objects
-    const firstMask = makeDarkMask(data, w, h, ignoreTop, 115);
-    const firstObjects = findObjects(firstMask, w, h, ignoreTop);
+    if (!bounds) {
+      document.getElementById("result").innerText =
+        "Could not find yellow card. Try a photo with the full card visible.";
+      return;
+    }
 
-    // STEP 2: detect grid lines by repeated rows/columns
-    const gridInfo = detectGridLines(firstObjects);
+    const pad = 8;
+    const sx = Math.max(0, bounds.minX - pad);
+    const sy = Math.max(0, bounds.minY - pad);
+    const sw = Math.min(w - sx, bounds.maxX - bounds.minX + pad * 2);
+    const sh = Math.min(h - sy, bounds.maxY - bounds.minY + pad * 2);
 
-    // STEP 3: paint detected grid lines yellow
-    const cleanedData = new Uint8ClampedArray(data);
-    paintGridYellow(cleanedData, w, h, gridInfo.gridXLines, gridInfo.gridYLines);
+    ctx.clearRect(0, 0, outputW, outputH);
+    ctx.drawImage(tempCanvas, sx, sy, sw, sh, 0, 0, outputW, outputH);
 
-    // STEP 4: run detection again on cleaned image
-    const secondMask = makeDarkMask(cleanedData, w, h, ignoreTop, 100);
-    const secondObjects = findObjects(secondMask, w, h, ignoreTop);
+    const straightData = ctx.getImageData(0, 0, outputW, outputH);
+    const cleanedData = new Uint8ClampedArray(straightData.data);
 
-    const finalObjects = secondObjects.filter(o => {
+    paintFixedGridYellow(cleanedData, outputW, outputH);
+
+    const cleanedImage = new ImageData(cleanedData, outputW, outputH);
+    ctx.putImageData(cleanedImage, 0, 0);
+
+    const ignoreTop = Math.round(outputH * 0.14);
+    const mask = makeDarkMask(cleanedData, outputW, outputH, ignoreTop, 100);
+    const objects = findObjects(mask, outputW, outputH, ignoreTop);
+
+    const finalObjects = objects.filter(o => {
       const validSize =
-        o.pixels >= 40 &&
+        o.pixels >= 35 &&
         o.pixels <= 3000 &&
-        o.area >= 50 &&
+        o.area >= 40 &&
         o.boxW >= 3 &&
         o.boxH >= 3 &&
         o.boxW <= 160 &&
@@ -71,34 +92,107 @@ document.getElementById("photoInput").addEventListener("change", function(e) {
 
       const notEdge =
         o.minX > 5 &&
-        o.maxX < w - 5 &&
-        o.minY > ignoreTop + 10 &&
-        o.maxY < h - 5;
+        o.maxX < outputW - 5 &&
+        o.minY > ignoreTop &&
+        o.maxY < outputH - 5;
 
       return validSize && notEdge;
     });
 
-    const outputImage = new ImageData(cleanedData, w, h);
-    ctx.putImageData(outputImage, 0, 0);
-
     ctx.lineWidth = 2;
     ctx.font = "12px Arial";
+    ctx.strokeStyle = "red";
+    ctx.fillStyle = "red";
 
     finalObjects.forEach((o, index) => {
-      ctx.strokeStyle = "red";
-      ctx.fillStyle = "red";
       ctx.strokeRect(o.minX, o.minY, o.boxW, o.boxH);
       ctx.fillText(index + 1, o.minX, o.minY - 2);
     });
 
     document.getElementById("result").innerText =
       "Detected insect-like objects: " + finalObjects.length +
-      " | Grid rows painted: " + gridInfo.gridYLines.length +
-      " | Grid columns painted: " + gridInfo.gridXLines.length;
+      " | Card cropped and standardized";
   };
 
   img.src = URL.createObjectURL(file);
 });
+
+function findYellowCardBounds(data, w, h) {
+  let minX = w, minY = h, maxX = 0, maxY = 0;
+  let count = 0;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+
+      const isYellow =
+        r > 120 &&
+        g > 100 &&
+        b < 120 &&
+        r > b * 1.4 &&
+        g > b * 1.3;
+
+      if (isYellow) {
+        count++;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  if (count < 5000) return null;
+
+  return { minX, minY, maxX, maxY };
+}
+
+function paintFixedGridYellow(data, w, h) {
+  const yellow = [230, 210, 20];
+  const thickness = 18;
+
+  const verticalLines = [
+    0.25,
+    0.50,
+    0.75
+  ];
+
+  const horizontalLines = [
+    0.20,
+    0.40,
+    0.60,
+    0.80
+  ];
+
+  function paintPixel(x, y) {
+    if (x < 0 || x >= w || y < 0 || y >= h) return;
+    const idx = (y * w + x) * 4;
+    data[idx] = yellow[0];
+    data[idx + 1] = yellow[1];
+    data[idx + 2] = yellow[2];
+  }
+
+  for (const vx of verticalLines) {
+    const gx = Math.round(w * vx);
+    for (let y = 0; y < h; y++) {
+      for (let dx = -thickness; dx <= thickness; dx++) {
+        paintPixel(gx + dx, y);
+      }
+    }
+  }
+
+  for (const hy of horizontalLines) {
+    const gy = Math.round(h * hy);
+    for (let x = 0; x < w; x++) {
+      for (let dy = -thickness; dy <= thickness; dy++) {
+        paintPixel(x, gy + dy);
+      }
+    }
+  }
+}
 
 function makeDarkMask(data, w, h, ignoreTop, threshold) {
   const mask = new Uint8Array(w * h);
@@ -172,25 +266,19 @@ function findObjects(mask, w, h, ignoreTop) {
         const boxW = obj.maxX - obj.minX + 1;
         const boxH = obj.maxY - obj.minY + 1;
         const area = boxW * boxH;
-        const aspectRatio = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
-        const fillRatio = obj.pixels / area;
         const centerX = (obj.minX + obj.maxX) / 2;
         const centerY = (obj.minY + obj.maxY) / 2;
 
         if (
           obj.pixels >= 5 &&
           boxW >= 2 &&
-          boxH >= 2 &&
-          boxW <= 200 &&
-          boxH <= 200
+          boxH >= 2
         ) {
           objects.push({
             pixels: obj.pixels,
             boxW,
             boxH,
             area,
-            aspectRatio,
-            fillRatio,
             centerX,
             centerY,
             minX: obj.minX,
@@ -204,84 +292,6 @@ function findObjects(mask, w, h, ignoreTop) {
   }
 
   return objects;
-}
-
-function detectGridLines(objects) {
-  const xTolerance = 8;
-  const yTolerance = 8;
-  const minObjectsOnLine = 8;
-
-  const xLines = [];
-  const yLines = [];
-
-  objects.forEach(o => {
-    let xCount = 0;
-    let yCount = 0;
-
-    objects.forEach(other => {
-      if (Math.abs(o.centerX - other.centerX) <= xTolerance) xCount++;
-      if (Math.abs(o.centerY - other.centerY) <= yTolerance) yCount++;
-    });
-
-    if (xCount >= minObjectsOnLine) xLines.push(o.centerX);
-    if (yCount >= minObjectsOnLine) yLines.push(o.centerY);
-  });
-
-  return {
-    gridXLines: mergeLines(xLines, 15),
-    gridYLines: mergeLines(yLines, 15)
-  };
-}
-
-function mergeLines(lines, tolerance) {
-  const sorted = [...lines].sort((a,b) => a - b);
-  const merged = [];
-
-  sorted.forEach(value => {
-    if (merged.length === 0) {
-      merged.push({ sum:value, count:1, value:value });
-    } else {
-      const last = merged[merged.length - 1];
-      if (Math.abs(value - last.value) <= tolerance) {
-        last.sum += value;
-        last.count++;
-        last.value = last.sum / last.count;
-      } else {
-        merged.push({ sum:value, count:1, value:value });
-      }
-    }
-  });
-
-  return merged.map(m => m.value);
-}
-
-function paintGridYellow(data, w, h, gridXLines, gridYLines) {
-  const thickness = 14;
-
-  function paintPixel(x, y) {
-    if (x < 0 || x >= w || y < 0 || y >= h) return;
-    const idx = (y * w + x) * 4;
-
-    data[idx] = 230;
-    data[idx + 1] = 210;
-    data[idx + 2] = 20;
-  }
-
-  for (const gx of gridXLines) {
-    for (let y = 0; y < h; y++) {
-      for (let dx = -thickness; dx <= thickness; dx++) {
-        paintPixel(Math.round(gx + dx), y);
-      }
-    }
-  }
-
-  for (const gy of gridYLines) {
-    for (let x = 0; x < w; x++) {
-      for (let dy = -thickness; dy <= thickness; dy++) {
-        paintPixel(x, Math.round(gy + dy));
-      }
-    }
-  }
 }
 </script>
 
