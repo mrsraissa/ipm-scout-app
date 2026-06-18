@@ -1,121 +1,227 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bug Scanner Test V10</title>
+  <title>Bug Scanner V11</title>
   <style>
     body { font-family: Arial; padding: 20px; background:#f3f4f6; }
     .card { background:white; padding:20px; border-radius:14px; max-width:1200px; margin:auto; }
     canvas { max-width:100%; border:1px solid #ccc; margin-top:15px; display:block; }
     .result { font-size:22px; font-weight:bold; color:#065f46; margin-top:15px; }
+    button {
+      background:#065f46;
+      color:white;
+      border:none;
+      padding:10px 18px;
+      border-radius:8px;
+      font-weight:bold;
+      margin-top:12px;
+      margin-right:8px;
+      cursor:pointer;
+    }
+    .ai-box {
+      margin-top:15px;
+      background:#ecfdf5;
+      border:1px solid #86efac;
+      padding:14px;
+      border-radius:10px;
+      font-size:18px;
+      color:#064e3b;
+    }
   </style>
 </head>
 <body>
 
 <div class="card">
-  <h2>Bug Scanner Test V10 - Auto Crop + Straighten</h2>
+  <h2>Bug Scanner V11 - Traditional + AI Preview</h2>
+
   <input type="file" accept="image/*" id="photoInput">
+
+  <br>
+
+  <button onclick="runTraditionalScan()">Traditional Scan</button>
+  <button onclick="runAIScan()">AI Scan Preview</button>
+
   <div class="result" id="result">Upload a sticky card photo.</div>
+  <div id="aiResults"></div>
+
   <canvas id="canvas"></canvas>
 </div>
 
 <script>
+let uploadedImage = null;
+let standardizedImageData = null;
+
 document.getElementById("photoInput").addEventListener("change", function(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  const img = new Image();
+  uploadedImage = new Image();
 
-  img.onload = function() {
-    const outputW = 700;
-    const outputH = 1000;
-
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-
-    canvas.width = outputW;
-    canvas.height = outputH;
-
-    const tempCanvas = document.createElement("canvas");
-    const tempCtx = tempCanvas.getContext("2d");
-
-    const maxWidth = 1000;
-    const scale = Math.min(maxWidth / img.width, 1);
-
-    tempCanvas.width = Math.round(img.width * scale);
-    tempCanvas.height = Math.round(img.height * scale);
-
-    tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-
-    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-    const data = imageData.data;
-    const w = tempCanvas.width;
-    const h = tempCanvas.height;
-
-    const bounds = findYellowCardBounds(data, w, h);
-
-    if (!bounds) {
-      document.getElementById("result").innerText =
-        "Could not find yellow card. Try a photo with the full card visible.";
-      return;
-    }
-
-    const pad = 8;
-    const sx = Math.max(0, bounds.minX - pad);
-    const sy = Math.max(0, bounds.minY - pad);
-    const sw = Math.min(w - sx, bounds.maxX - bounds.minX + pad * 2);
-    const sh = Math.min(h - sy, bounds.maxY - bounds.minY + pad * 2);
-
-    ctx.clearRect(0, 0, outputW, outputH);
-    ctx.drawImage(tempCanvas, sx, sy, sw, sh, 0, 0, outputW, outputH);
-
-    const straightData = ctx.getImageData(0, 0, outputW, outputH);
-    const cleanedData = new Uint8ClampedArray(straightData.data);
-
-    paintFixedGridYellow(cleanedData, outputW, outputH);
-
-    const cleanedImage = new ImageData(cleanedData, outputW, outputH);
-    ctx.putImageData(cleanedImage, 0, 0);
-
-    const ignoreTop = Math.round(outputH * 0.14);
-    const mask = makeDarkMask(cleanedData, outputW, outputH, ignoreTop, 100);
-    const objects = findObjects(mask, outputW, outputH, ignoreTop);
-
-    const finalObjects = objects.filter(o => {
-      const validSize =
-        o.pixels >= 35 &&
-        o.pixels <= 3000 &&
-        o.area >= 40 &&
-        o.boxW >= 3 &&
-        o.boxH >= 3 &&
-        o.boxW <= 160 &&
-        o.boxH <= 160;
-
-      const notEdge =
-        o.minX > 5 &&
-        o.maxX < outputW - 5 &&
-        o.minY > ignoreTop &&
-        o.maxY < outputH - 5;
-
-      return validSize && notEdge;
-    });
-
-    ctx.lineWidth = 2;
-    ctx.font = "12px Arial";
-    ctx.strokeStyle = "red";
-    ctx.fillStyle = "red";
-
-    finalObjects.forEach((o, index) => {
-      ctx.strokeRect(o.minX, o.minY, o.boxW, o.boxH);
-      ctx.fillText(index + 1, o.minX, o.minY - 2);
-    });
-
-    document.getElementById("result").innerText =
-      "Detected insect-like objects: " + finalObjects.length +
-      " | Card cropped and standardized";
+  uploadedImage.onload = function() {
+    prepareCard();
   };
 
-  img.src = URL.createObjectURL(file);
+  uploadedImage.src = URL.createObjectURL(file);
 });
+
+function prepareCard() {
+  if (!uploadedImage) return;
+
+  const outputW = 700;
+  const outputH = 1000;
+
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = outputW;
+  canvas.height = outputH;
+
+  const tempCanvas = document.createElement("canvas");
+  const tempCtx = tempCanvas.getContext("2d");
+
+  const maxWidth = 1000;
+  const scale = Math.min(maxWidth / uploadedImage.width, 1);
+
+  tempCanvas.width = Math.round(uploadedImage.width * scale);
+  tempCanvas.height = Math.round(uploadedImage.height * scale);
+
+  tempCtx.drawImage(uploadedImage, 0, 0, tempCanvas.width, tempCanvas.height);
+
+  const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+  const data = imageData.data;
+  const w = tempCanvas.width;
+  const h = tempCanvas.height;
+
+  const bounds = findYellowCardBounds(data, w, h);
+
+  if (!bounds) {
+    document.getElementById("result").innerText =
+      "Could not find yellow card. Try a photo with the full card visible.";
+    return;
+  }
+
+  const pad = 8;
+  const sx = Math.max(0, bounds.minX - pad);
+  const sy = Math.max(0, bounds.minY - pad);
+  const sw = Math.min(w - sx, bounds.maxX - bounds.minX + pad * 2);
+  const sh = Math.min(h - sy, bounds.maxY - bounds.minY + pad * 2);
+
+  ctx.clearRect(0, 0, outputW, outputH);
+  ctx.drawImage(tempCanvas, sx, sy, sw, sh, 0, 0, outputW, outputH);
+
+  standardizedImageData = ctx.getImageData(0, 0, outputW, outputH);
+
+  document.getElementById("result").innerText =
+    "Card uploaded and standardized. Choose Traditional Scan or AI Scan Preview.";
+
+  document.getElementById("aiResults").innerHTML = "";
+}
+
+function runTraditionalScan() {
+  if (!standardizedImageData) {
+    alert("Upload a sticky card photo first.");
+    return;
+  }
+
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const outputW = canvas.width;
+  const outputH = canvas.height;
+
+  const cleanedData = new Uint8ClampedArray(standardizedImageData.data);
+
+  paintFixedGridYellow(cleanedData, outputW, outputH);
+
+  const cleanedImage = new ImageData(cleanedData, outputW, outputH);
+  ctx.putImageData(cleanedImage, 0, 0);
+
+  const ignoreTop = Math.round(outputH * 0.14);
+  const mask = makeDarkMask(cleanedData, outputW, outputH, ignoreTop, 100);
+  const objects = findObjects(mask, outputW, outputH, ignoreTop);
+
+  const finalObjects = objects.filter(o => {
+    const validSize =
+      o.pixels >= 35 &&
+      o.pixels <= 3000 &&
+      o.area >= 40 &&
+      o.boxW >= 3 &&
+      o.boxH >= 3 &&
+      o.boxW <= 160 &&
+      o.boxH <= 160;
+
+    const notEdge =
+      o.minX > 5 &&
+      o.maxX < outputW - 5 &&
+      o.minY > ignoreTop &&
+      o.maxY < outputH - 5;
+
+    return validSize && notEdge;
+  });
+
+  ctx.lineWidth = 2;
+  ctx.font = "12px Arial";
+  ctx.strokeStyle = "red";
+  ctx.fillStyle = "red";
+
+  finalObjects.forEach((o, index) => {
+    ctx.strokeRect(o.minX, o.minY, o.boxW, o.boxH);
+    ctx.fillText(index + 1, o.minX, o.minY - 2);
+  });
+
+  document.getElementById("result").innerText =
+    "Traditional detected objects: " + finalObjects.length;
+
+  document.getElementById("aiResults").innerHTML = "";
+}
+
+function runAIScan() {
+  if (!standardizedImageData) {
+    alert("Upload a sticky card photo first.");
+    return;
+  }
+
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  ctx.putImageData(standardizedImageData, 0, 0);
+
+  document.getElementById("result").innerText =
+    "AI Scan Preview complete.";
+
+  const fakeDetections = [
+    { x: 120, y: 230, w: 40, h: 35, cls: "fungus_gnat", score: 0.91 },
+    { x: 285, y: 510, w: 22, h: 18, cls: "thrips", score: 0.84 },
+    { x: 455, y: 720, w: 28, h: 24, cls: "aphid", score: 0.76 }
+  ];
+
+  drawAIDetections(fakeDetections);
+
+  document.getElementById("aiResults").innerHTML = `
+    <div class="ai-box">
+      <b>AI Preview Results</b><br><br>
+      Fungus Gnats: 1<br>
+      Thrips: 1<br>
+      Aphids: 1<br><br>
+      <small>This is a fake preview. Later this will use your trained AI model.</small>
+    </div>
+  `;
+}
+
+function drawAIDetections(detections) {
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  ctx.lineWidth = 3;
+  ctx.font = "14px Arial";
+  ctx.strokeStyle = "lime";
+  ctx.fillStyle = "lime";
+
+  detections.forEach(d => {
+    ctx.strokeRect(d.x, d.y, d.w, d.h);
+    ctx.fillText(`${d.cls} ${d.score}`, d.x, d.y - 5);
+  });
+}
 
 function findYellowCardBounds(data, w, h) {
   let minX = w, minY = h, maxX = 0, maxY = 0;
@@ -154,18 +260,8 @@ function paintFixedGridYellow(data, w, h) {
   const yellow = [230, 210, 20];
   const thickness = 18;
 
-  const verticalLines = [
-    0.25,
-    0.50,
-    0.75
-  ];
-
-  const horizontalLines = [
-    0.20,
-    0.40,
-    0.60,
-    0.80
-  ];
+  const verticalLines = [0.25, 0.50, 0.75];
+  const horizontalLines = [0.20, 0.40, 0.60, 0.80];
 
   function paintPixel(x, y) {
     if (x < 0 || x >= w || y < 0 || y >= h) return;
@@ -269,11 +365,7 @@ function findObjects(mask, w, h, ignoreTop) {
         const centerX = (obj.minX + obj.maxX) / 2;
         const centerY = (obj.minY + obj.maxY) / 2;
 
-        if (
-          obj.pixels >= 5 &&
-          boxW >= 2 &&
-          boxH >= 2
-        ) {
+        if (obj.pixels >= 5 && boxW >= 2 && boxH >= 2) {
           objects.push({
             pixels: obj.pixels,
             boxW,
