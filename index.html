@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=204">
+  <link rel="stylesheet" href="css/style.css?v=205">
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
@@ -55,7 +55,7 @@
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwdJdfkIzl3ndZZe7go7IB8EONnlMWcPaHKhfXGUoRco1ShtQ6fcmbyJYDH38Ee7ccy/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw0gvDgTKFNaGw8YnTJR3g9fT4wF03iiXNWSQnQFOwThWCt1ZME4_DOvo4F0e8D2KD6/exec";
 
 const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
 
@@ -106,8 +106,8 @@ function initializeApp() {
   }
 
   /*
-   * getStatus is the reliable source for the week and bay colors.
-   * getCurrentWeekEntries loads saved counts and notes for fast editing.
+   * Load the current week and bay colors first.
+   * Then load all saved current-week entries for instant editing.
    */
   setTimeout(() => {
     loadStatus();
@@ -115,7 +115,7 @@ function initializeApp() {
   }, 50);
 
   /*
-   * Keep both users synchronized without blocking the interface.
+   * Keep both scouts synchronized in the background.
    */
   setInterval(() => {
     loadStatus();
@@ -261,7 +261,7 @@ async function loadCurrentWeekEntries(force = false) {
       data.entries === null
     ) {
       console.warn(
-        "getCurrentWeekEntries is not available in the deployed Apps Script yet.",
+        "Current-week entries were not returned by Apps Script:",
         data
       );
 
@@ -271,20 +271,14 @@ async function loadCurrentWeekEntries(force = false) {
     currentWeekEntries = data.entries;
     entriesAreLoaded = true;
 
-    /*
-     * Build all bay colors from this same response.
-     * This removes the need for a separate getStatus request.
-     */
     weekStatus = {};
 
     Object.keys(currentWeekEntries).forEach(key => {
-      weekStatus[key] =
-        currentWeekEntries[key].status;
+      weekStatus[key] = currentWeekEntries[key].status;
     });
 
     if (data.week) {
       currentWeek = data.week;
-
       document.getElementById("weekDisplay").innerHTML =
         "Week " + currentWeek;
     }
