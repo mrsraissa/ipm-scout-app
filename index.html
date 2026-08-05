@@ -9,8 +9,11 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=210">
-  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="css/style.css?v=211">
+  <script
+  src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+  onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';">
+</script>
 </head>
 
 <body>
@@ -57,7 +60,7 @@
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbw0gvDgTKFNaGw8YnTJR3g9fT4wF03iiXNWSQnQFOwThWCt1ZME4_DOvo4F0e8D2KD6/exec";
 
-console.log("IPM Scout build 210 loaded");
+console.log("IPM Scout build 211 loaded");
 
 const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
 
@@ -1486,78 +1489,168 @@ async function waitForExportImages(element) {
   );
 }
 
-async function downloadElementAsPng(elementId, fileName, backgroundColor = "#ffffff") {
-  const element = document.getElementById(elementId);
+async function ensureHtml2CanvasLoaded(timeoutMs = 12000) {
+  if (typeof html2canvas === "function") {
+    return true;
+  }
 
-  if (!element) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    if (typeof html2canvas === "function") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function downloadElementAsPng(
+  elementId,
+  fileName,
+  backgroundColor = "#ffffff"
+) {
+  const original = document.getElementById(elementId);
+
+  if (!original) {
     alert("The export figure is not ready yet.");
     return;
   }
 
-  if (typeof html2canvas !== "function") {
-    alert("The download library is still loading. Please try again in a moment.");
+  const libraryReady = await ensureHtml2CanvasLoaded();
+
+  if (!libraryReady) {
+    alert(
+      "The image download library could not load. " +
+      "Please refresh the page and try again."
+    );
     return;
   }
 
-  const originalStyles = {
-    position: element.style.position,
-    left: element.style.left,
-    top: element.style.top,
-    zIndex: element.style.zIndex,
-    display: element.style.display,
-    visibility: element.style.visibility,
-    overflow: element.style.overflow
-  };
+  let captureWrapper = null;
 
   try {
     /*
-     * Move hidden export content into the renderable viewport
-     * without displaying it above the app.
+     * html2canvas is more reliable when the target is actually
+     * rendered inside the viewport. Clone the export figure into
+     * a temporary full-size white capture area.
      */
-    element.style.position = "fixed";
-    element.style.left = "0";
-    element.style.top = "0";
-    element.style.zIndex = "-9999";
-    element.style.display = "block";
-    element.style.visibility = "visible";
-    element.style.overflow = "visible";
+    captureWrapper = document.createElement("div");
 
-    await waitForExportImages(element);
+    captureWrapper.style.position = "fixed";
+    captureWrapper.style.left = "0";
+    captureWrapper.style.top = "0";
+    captureWrapper.style.zIndex = "2147483647";
+    captureWrapper.style.background = backgroundColor;
+    captureWrapper.style.padding = "0";
+    captureWrapper.style.margin = "0";
+    captureWrapper.style.overflow = "visible";
+    captureWrapper.style.pointerEvents = "none";
+
+    const clone = original.cloneNode(true);
+
+    clone.removeAttribute("id");
+    clone.style.position = "relative";
+    clone.style.left = "0";
+    clone.style.top = "0";
+    clone.style.display = "block";
+    clone.style.visibility = "visible";
+    clone.style.opacity = "1";
+    clone.style.transform = "none";
+    clone.style.margin = "0";
+    clone.style.overflow = "visible";
+
+    captureWrapper.appendChild(clone);
+    document.body.appendChild(captureWrapper);
+
+    await waitForExportImages(clone);
 
     if (document.fonts && document.fonts.ready) {
       await document.fonts.ready;
     }
 
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(resolve);
+      });
+    });
 
-    const canvas = await html2canvas(element, {
+    const width = Math.ceil(
+      Math.max(
+        clone.scrollWidth,
+        clone.offsetWidth,
+        clone.getBoundingClientRect().width
+      )
+    );
+
+    const height = Math.ceil(
+      Math.max(
+        clone.scrollHeight,
+        clone.offsetHeight,
+        clone.getBoundingClientRect().height
+      )
+    );
+
+    if (!width || !height) {
+      throw new Error(
+        "The export figure has no measurable size."
+      );
+    }
+
+    const canvas = await html2canvas(clone, {
       backgroundColor: backgroundColor,
-      scale: 4,
+      scale: 2,
       useCORS: true,
       allowTaint: false,
       logging: false,
-      width: element.scrollWidth,
-      height: element.scrollHeight,
-      windowWidth: Math.max(document.documentElement.clientWidth, element.scrollWidth),
-      windowHeight: Math.max(document.documentElement.clientHeight, element.scrollHeight)
+      width: width,
+      height: height,
+      windowWidth: width,
+      windowHeight: height,
+      scrollX: 0,
+      scrollY: 0
     });
 
+    const blob = await new Promise(resolve => {
+      canvas.toBlob(resolve, "image/png");
+    });
+
+    if (!blob) {
+      throw new Error("The PNG file could not be created.");
+    }
+
+    const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
+
+    link.href = downloadUrl;
     link.download = fileName;
-    link.href = canvas.toDataURL("image/png");
+    document.body.appendChild(link);
     link.click();
+    link.remove();
+
+    setTimeout(() => {
+      URL.revokeObjectURL(downloadUrl);
+    }, 1000);
 
   } catch (error) {
     console.error("PNG download failed:", error);
-    alert("The figure could not be downloaded. Please try again.");
+
+    alert(
+      "The graph could not be downloaded. " +
+      "Please open the graph first and try again."
+    );
+
   } finally {
-    element.style.position = originalStyles.position;
-    element.style.left = originalStyles.left;
-    element.style.top = originalStyles.top;
-    element.style.zIndex = originalStyles.zIndex;
-    element.style.display = originalStyles.display;
-    element.style.visibility = originalStyles.visibility;
-    element.style.overflow = originalStyles.overflow;
+    if (
+      captureWrapper &&
+      captureWrapper.parentNode
+    ) {
+      captureWrapper.parentNode.removeChild(
+        captureWrapper
+      );
+    }
   }
 }
 
