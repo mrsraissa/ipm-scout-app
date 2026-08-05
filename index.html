@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=211">
+  <link rel="stylesheet" href="css/style.css?v=212">
   <script
   src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
   onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';">
@@ -60,7 +60,7 @@
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbw0gvDgTKFNaGw8YnTJR3g9fT4wF03iiXNWSQnQFOwThWCt1ZME4_DOvo4F0e8D2KD6/exec";
 
-console.log("IPM Scout build 211 loaded");
+console.log("IPM Scout build 212 loaded");
 
 const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
 
@@ -687,8 +687,8 @@ function showEntry(bay, entryData = null) {
     <label><strong>Notes</strong></label>
     <textarea id="notes" placeholder="Crop, location, treatment, beneficials...">${savedNotes}</textarea>
 
-    <button class="save-btn" onclick="saveCounts()">Save Counts</button>
-    <button class="empty-btn" onclick="saveEmptyBay()">No Plants</button>
+    <button id="saveCountsButton" class="save-btn" onclick="saveCounts()">Save Counts</button>
+    <button id="saveEmptyButton" class="empty-btn" onclick="saveEmptyBay()">No Plants</button>
 
     ${lastUpdated ? `<div class="last-updated">Last updated: ${lastScout ? lastScout + " - " : ""}${lastUpdated}</div>` : ""}
 
@@ -698,29 +698,97 @@ function showEntry(bay, entryData = null) {
   document.getElementById("entryContainer").innerHTML = html;
 }
 
-function sendToSheet(params) {
+async function sendToSheet(params, timeoutMs = 20000) {
   const formData = new URLSearchParams();
 
   Object.keys(params).forEach(key => {
     formData.append(key, params[key]);
   });
 
-  return fetch(API_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: formData.toString()
-  });
+  const controller = new AbortController();
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      redirect: "follow",
+      cache: "no-store",
+      credentials: "omit",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+      },
+      body: formData.toString(),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        "Google returned HTTP " + response.status + "."
+      );
+    }
+
+    const contentType =
+      response.headers.get("content-type") || "";
+
+    if (!contentType.toLowerCase().includes("json")) {
+      throw new Error(
+        "Google did not return a valid save confirmation."
+      );
+    }
+
+    const result = await response.json();
+
+    if (!result || result.success !== true) {
+      throw new Error(
+        result && result.message
+          ? result.message
+          : "The data was not confirmed by Google Sheets."
+      );
+    }
+
+    return result;
+
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(
+        "The save request timed out. The data was not confirmed."
+      );
+    }
+
+    throw error;
+
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
-function saveCounts() {
+function setSavingState(isSaving) {
+  const saveCountsButton =
+    document.getElementById("saveCountsButton");
+
+  const saveEmptyButton =
+    document.getElementById("saveEmptyButton");
+
+  if (saveCountsButton) {
+    saveCountsButton.disabled = isSaving;
+  }
+
+  if (saveEmptyButton) {
+    saveEmptyButton.disabled = isSaving;
+  }
+}
+
+async function saveCounts() {
   const values = {};
 
-  document.querySelectorAll("#entryContainer input").forEach(input => {
-    values[input.dataset.pest] = input.value;
-  });
+  document
+    .querySelectorAll("#entryContainer input")
+    .forEach(input => {
+      values[input.dataset.pest] = input.value;
+    });
 
   const sectionAtSave = selectedSection;
   const bayAtSave = selectedBay;
@@ -730,11 +798,12 @@ function saveCounts() {
 
   if (!message) return;
 
-  message.innerHTML = "Sending...";
+  message.textContent = "Saving...";
   message.className = "message";
+  setSavingState(true);
 
   try {
-    sendToSheet({
+    await sendToSheet({
       scout: currentScout,
       section: sectionAtSave,
       bay: bayAtSave,
@@ -746,6 +815,9 @@ function saveCounts() {
       notes: notes ? notes.value : ""
     });
 
+    /*
+     * Update the page only after Apps Script confirms success.
+     */
     weekStatus[key] = "Scouted";
 
     currentWeekEntries[key] = {
@@ -763,25 +835,39 @@ function saveCounts() {
       lastScout: currentScout
     };
 
-    message.innerHTML = "✓ Submitted";
+    message.textContent = "✓ Saved successfully";
     message.className = "message success-message";
+
+    /*
+     * Invalidate the combined cache so the next refresh reads
+     * the newly confirmed sheet values.
+     */
+    appDataCache = null;
+    appDataLoadedAt = 0;
 
     setTimeout(() => {
       selectedBay = "";
       showBays(sectionAtSave);
-    }, 250);
+    }, 500);
 
     setTimeout(() => {
       loadAppData(true);
-    }, 1800);
+    }, 1200);
+
   } catch (error) {
     console.error("Submission failed:", error);
-    message.innerHTML = "Submission failed. Please check your connection.";
+
+    message.textContent =
+      "❌ Data was not confirmed: " +
+      error.message +
+      " Your entry is still on this screen. Please try again.";
+
     message.className = "message error-message";
+    setSavingState(false);
   }
 }
 
-function saveEmptyBay() {
+async function saveEmptyBay() {
   const sectionAtSave = selectedSection;
   const bayAtSave = selectedBay;
   const key = sectionAtSave + "|" + bayAtSave;
@@ -790,18 +876,27 @@ function saveEmptyBay() {
 
   if (!message) return;
 
-  message.innerHTML = "Sending...";
+  message.textContent = "Saving...";
   message.className = "message";
+  setSavingState(true);
 
   try {
-    sendToSheet({
+    const savedNotes =
+      notes && notes.value
+        ? notes.value
+        : "No plants";
+
+    await sendToSheet({
       scout: currentScout,
       section: sectionAtSave,
       bay: bayAtSave,
       status: "Empty",
-      notes: notes && notes.value ? notes.value : "No plants"
+      notes: savedNotes
     });
 
+    /*
+     * Update the page only after Apps Script confirms success.
+     */
     weekStatus[key] = "Empty";
 
     currentWeekEntries[key] = {
@@ -814,26 +909,36 @@ function saveEmptyBay() {
         "Whiteflies": "",
         "Fungus Gnats": ""
       },
-      notes: notes && notes.value ? notes.value : "No plants",
+      notes: savedNotes,
       lastUpdated: new Date().toISOString(),
       lastScout: currentScout
     };
 
-    message.innerHTML = "✓ Empty bay submitted";
+    message.textContent = "✓ Empty bay saved";
     message.className = "message success-message";
+
+    appDataCache = null;
+    appDataLoadedAt = 0;
 
     setTimeout(() => {
       selectedBay = "";
       showBays(sectionAtSave);
-    }, 250);
+    }, 500);
 
     setTimeout(() => {
       loadAppData(true);
-    }, 1800);
+    }, 1200);
+
   } catch (error) {
     console.error("Empty bay submission failed:", error);
-    message.innerHTML = "Submission failed. Please check your connection.";
+
+    message.textContent =
+      "❌ Data was not confirmed: " +
+      error.message +
+      " Your entry is still on this screen. Please try again.";
+
     message.className = "message error-message";
+    setSavingState(false);
   }
 }
 
