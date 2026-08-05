@@ -9,8 +9,8 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=145">
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="css/style.css?v=201">
+  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
 <body>
@@ -83,35 +83,80 @@ let weekStatus = {};
 let currentWeek = "";
 let currentScout = localStorage.getItem("currentScout") || "";
 
-loadStatus();
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeApp);
+} else {
+  initializeApp();
+}
+
+function initializeApp() {
+  if (currentScout) {
+    showScoutWithPencil();
+    renderSections();
+  } else {
+    selectScout();
+  }
+
+  setTimeout(loadStatus, 50);
+}
 
 /* ---------- LOAD DATA ---------- */
 
 function loadStatus() {
-  const callbackName = "statusCallback_" + Date.now();
-
-  window[callbackName] = function(data) {
-    if (data.success) {
-      weekStatus = data.records || {};
-      currentWeek = data.week || "";
-
-      document.getElementById("weekDisplay").innerHTML =
-        currentWeek ? "Week " + currentWeek : "";
-
-      if (currentScout) {
-        showScoutWithPencil();
-        renderSections();
-      } else {
-        selectScout();
-      }
-    }
-
-    delete window[callbackName];
-    script.remove();
-  };
+  const callbackName =
+    "statusCallback_" +
+    Date.now() +
+    "_" +
+    Math.random().toString(36).slice(2);
 
   const script = document.createElement("script");
-  script.src = API_URL + "?action=getStatus&callback=" + callbackName;
+
+  const timeout = setTimeout(() => {
+    cleanup();
+    console.warn("Status request timed out. The current screen remains available.");
+  }, 8000);
+
+  function cleanup() {
+    clearTimeout(timeout);
+
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
+    }
+
+    try {
+      delete window[callbackName];
+    } catch (error) {
+      window[callbackName] = undefined;
+    }
+  }
+
+  window[callbackName] = function(data) {
+    cleanup();
+
+    if (!data || !data.success) return;
+
+    weekStatus = data.records || {};
+    currentWeek = data.week || "";
+
+    document.getElementById("weekDisplay").innerHTML =
+      currentWeek ? "Week " + currentWeek : "";
+
+    if (selectedSection && !selectedBay) {
+      showBays(selectedSection, false);
+    }
+  };
+
+  script.onerror = function() {
+    cleanup();
+    console.warn("Could not retrieve shared bay status.");
+  };
+
+  script.src =
+    API_URL +
+    "?action=getStatus" +
+    "&callback=" + callbackName +
+    "&_=" + Date.now();
+
   document.body.appendChild(script);
 }
 
@@ -267,7 +312,7 @@ function renderSections() {
   document.getElementById("sectionContainer").innerHTML = html;
 }
 
-function showBays(section) {
+function showBays(section, refreshSharedStatus = true) {
   const progress = getSectionPercent(section);
 
   selectedSection = section;
@@ -287,11 +332,19 @@ function showBays(section) {
 
   bayMap[section].forEach(bay => {
     const statusClass = getBayStatus(section, bay);
-    html += `<button class="btn ${statusClass}" onclick="handleBayClick('${bay}')">${bay}</button>`;
+    html += `
+      <button class="btn ${statusClass}" onclick="handleBayClick('${bay}')">
+        ${bay}
+      </button>
+    `;
   });
 
   html += `</div>`;
   document.getElementById("bayContainer").innerHTML = html;
+
+  if (refreshSharedStatus) {
+    setTimeout(loadStatus, 50);
+  }
 }
 
 function getSectionPercent(section) {
@@ -320,45 +373,98 @@ function getBayStatus(section, bay) {
 }
 
 function getEntryData(section, bay) {
-  return new Promise((resolve) => {
-    const callbackName = "entryCallback_" + Date.now();
-
-    window[callbackName] = function(data) {
-      resolve(data);
-
-      delete window[callbackName];
-      script.remove();
-    };
+  return new Promise((resolve, reject) => {
+    const callbackName =
+      "entryCallback_" +
+      Date.now() +
+      "_" +
+      Math.random().toString(36).slice(2);
 
     const script = document.createElement("script");
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Saved entry request timed out."));
+    }, 8000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = undefined;
+      }
+    }
+
+    window[callbackName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = function() {
+      cleanup();
+      reject(new Error("Could not connect to Apps Script."));
+    };
+
     script.src =
       API_URL +
       "?action=getEntry" +
       "&section=" + encodeURIComponent(section) +
       "&bay=" + encodeURIComponent(bay) +
-      "&callback=" + callbackName;
+      "&callback=" + callbackName +
+      "&_=" + Date.now();
 
     document.body.appendChild(script);
   });
 }
 
 async function handleBayClick(bay) {
-  const key = selectedSection + "|" + bay;
+  const sectionAtOpen = selectedSection;
+  const key = sectionAtOpen + "|" + bay;
   const status = weekStatus[key];
 
-  if (status === "Scouted" || status === "Empty") {
-    const answer = confirm(
-      "This bay was already entered this week.\n\nDo you want to modify it?"
-    );
-
-    if (!answer) return;
-
-    const entryData = await getEntryData(selectedSection, bay);
-    showEntry(bay, entryData);
+  if (status !== "Scouted" && status !== "Empty") {
+    showEntry(bay);
     return;
   }
 
-  showEntry(bay);
+  const answer = confirm(
+    "This bay was already entered this week.\n\nDo you want to modify it?"
+  );
+
+  if (!answer) return;
+
+  selectedBay = bay;
+  updateBottomBar("entry");
+  showScoutNameOnly();
+
+  document.getElementById("bayContainer").innerHTML = `
+    <div class="dashboard-card" style="text-align:center;padding:28px;color:#64748b;font-weight:700;">
+      Loading saved entry...
+    </div>
+  `;
+
+  try {
+    const entryData = await getEntryData(sectionAtOpen, bay);
+
+    if (selectedSection !== sectionAtOpen || selectedBay !== bay) return;
+
+    showEntry(bay, entryData);
+  } catch (error) {
+    console.error("Could not load saved entry:", error);
+
+    document.getElementById("bayContainer").innerHTML = `
+      <div class="dashboard-card" style="text-align:center;padding:24px;color:#dc2626;font-weight:700;">
+        Could not load the saved entry.<br><br>
+        <button class="btn" onclick="showBays('${sectionAtOpen}')">Return to Bays</button>
+      </div>
+    `;
+  }
 }
 
 function showEntry(bay, entryData = null) {
@@ -415,77 +521,103 @@ function sendToSheet(params) {
     formData.append(key, params[key]);
   });
 
-  return fetch(API_URL, {
+  fetch(API_URL, {
     method: "POST",
     mode: "no-cors",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded"
     },
     body: formData.toString()
+  }).catch(error => {
+    console.error("Background submission failed:", error);
   });
 }
 
-async function saveCounts() {
+function saveCounts() {
   const values = {};
 
   document.querySelectorAll("#entryContainer input").forEach(input => {
     values[input.dataset.pest] = input.value;
   });
 
-  document.getElementById("message").innerHTML = "Saving...";
-  document.getElementById("message").className = "message";
+  const sectionAtSave = selectedSection;
+  const bayAtSave = selectedBay;
+  const key = sectionAtSave + "|" + bayAtSave;
+  const message = document.getElementById("message");
+  const notes = document.getElementById("notes");
+
+  if (!message) return;
+
+  message.innerHTML = "Sending...";
+  message.className = "message";
 
   try {
-    await sendToSheet({
+    sendToSheet({
       scout: currentScout,
-      section: selectedSection,
-      bay: selectedBay,
+      section: sectionAtSave,
+      bay: bayAtSave,
       status: "Scouted",
       thrips: values["Thrips"] || 0,
       aphids: values["Aphids"] || 0,
       whiteflies: values["Whiteflies"] || 0,
       fungusGnats: values["Fungus Gnats"] || 0,
-      notes: document.getElementById("notes").value
+      notes: notes ? notes.value : ""
     });
 
-    weekStatus[selectedSection + "|" + selectedBay] = "Scouted";
+    weekStatus[key] = "Scouted";
 
-    document.getElementById("message").innerHTML = "✓ Saved Successfully";
-    document.getElementById("message").className = "message success-message";
+    message.innerHTML = "✓ Submitted";
+    message.className = "message success-message";
 
-    setTimeout(() => showBays(selectedSection), 900);
+    setTimeout(() => {
+      selectedBay = "";
+      showBays(sectionAtSave, false);
+    }, 250);
 
-  } catch (err) {
-    document.getElementById("message").innerHTML =
-      "Save failed. Check internet connection.";
-    document.getElementById("message").className = "message error-message";
+    setTimeout(loadStatus, 1800);
+  } catch (error) {
+    console.error("Submission failed:", error);
+    message.innerHTML = "Submission failed. Please check your connection.";
+    message.className = "message error-message";
   }
 }
 
-async function saveEmptyBay() {
-  document.getElementById("message").innerHTML = "Saving...";
-  document.getElementById("message").className = "message";
+function saveEmptyBay() {
+  const sectionAtSave = selectedSection;
+  const bayAtSave = selectedBay;
+  const key = sectionAtSave + "|" + bayAtSave;
+  const message = document.getElementById("message");
+  const notes = document.getElementById("notes");
+
+  if (!message) return;
+
+  message.innerHTML = "Sending...";
+  message.className = "message";
 
   try {
-    await sendToSheet({
+    sendToSheet({
       scout: currentScout,
-      section: selectedSection,
-      bay: selectedBay,
+      section: sectionAtSave,
+      bay: bayAtSave,
       status: "Empty",
-      notes: document.getElementById("notes").value || "No plants"
+      notes: notes && notes.value ? notes.value : "No plants"
     });
 
-    weekStatus[selectedSection + "|" + selectedBay] = "Empty";
+    weekStatus[key] = "Empty";
 
-    document.getElementById("message").innerHTML = "✓ Empty Bay Saved";
-    document.getElementById("message").className = "message success-message";
+    message.innerHTML = "✓ Empty bay submitted";
+    message.className = "message success-message";
 
-    setTimeout(() => showBays(selectedSection), 900);
+    setTimeout(() => {
+      selectedBay = "";
+      showBays(sectionAtSave, false);
+    }, 250);
 
-  } catch (err) {
-    document.getElementById("message").innerHTML =
-      "Save failed. Check internet connection.";
-    document.getElementById("message").className = "message error-message";
+    setTimeout(loadStatus, 1800);
+  } catch (error) {
+    console.error("Empty bay submission failed:", error);
+    message.innerHTML = "Submission failed. Please check your connection.";
+    message.className = "message error-message";
   }
 }
 
