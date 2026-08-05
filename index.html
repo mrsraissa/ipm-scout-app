@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=205">
+  <link rel="stylesheet" href="css/style.css?v=206">
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
@@ -56,6 +56,8 @@
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbw0gvDgTKFNaGw8YnTJR3g9fT4wF03iiXNWSQnQFOwThWCt1ZME4_DOvo4F0e8D2KD6/exec";
+
+console.log("IPM Scout build 206 loaded");
 
 const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
 
@@ -109,21 +111,19 @@ function initializeApp() {
    * Load the current week and bay colors first.
    * Then load all saved current-week entries for instant editing.
    */
-  setTimeout(async () => {
-    await loadStatus();
+  setTimeout(() => {
+    loadStatus();
     loadCurrentWeekEntries(true);
-}, 50);
+  }, 50);
 
   /*
    * Keep both scouts synchronized in the background.
    */
   setInterval(() => {
     loadStatus();
-
-    if (!entriesAreLoading) {
-        loadCurrentWeekEntries(true);
-    }
-}, 30000);
+    loadCurrentWeekEntries(true);
+  }, 30000);
+}
 
 /* ---------- LOAD DATA ---------- */
 
