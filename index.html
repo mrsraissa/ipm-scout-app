@@ -1,1753 +1,1072 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+const SS = SpreadsheetApp.getActiveSpreadsheet();
 
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#065f46">
+const HISTORY_SHEET_NAME = "Scout_Data";
+const CURRENT_SHEET_NAME = "Current_Week";
 
-  <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=207">
-  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-</head>
+const HISTORY_COLUMNS = 9;
+const CURRENT_COLUMNS = 11;
 
-<body>
+const STATUS_CACHE_KEY = "ipm_current_week_status";
+const ENTRIES_CACHE_KEY = "ipm_current_week_entries";
 
-<div class="layout">
-  <aside class="sidebar">
-    <h2>IPM Scout</h2>
-    <a class="nav-link active" onclick="showPage('scout')">Scout</a>
-    <a class="nav-link" onclick="showPage('dashboard')">Dashboard</a>
-    <a class="nav-link" onclick="showPage('heatmaps')">Heat Maps</a>
-    <a class="nav-link" onclick="showPage('reports')">Reports</a>
-  </aside>
+/* ==================================================
+   WEB APP ROUTES
+================================================== */
 
-  <main class="container">
-    <h1>IPM Scout</h1>
-    <div id="weekDisplay">Loading week...</div>
-    <div id="currentScout"></div>
-
-    <div id="scoutPage" class="card">
-      <div id="sectionContainer"></div>
-      <div id="bayContainer"></div>
-      <div id="entryContainer"></div>
-    </div>
-
-    <div id="dashboardPage" class="card page hidden-page"></div>
-
-    <div id="heatmapsPage" class="card page hidden-page">
-      <h2>Heat Maps</h2>
-      <p>Heat maps coming later.</p>
-    </div>
-
-    <div id="reportsPage" class="card page hidden-page">
-      <h2>Reports</h2>
-      <p>Reports coming later.</p>
-    </div>
-
-    <footer id="bottomBar" class="bottom-bar hidden">
-      <button id="bottomSectionsBtn" onclick="goToSections()">⌂ Sections</button>
-      <button id="bottomBaysBtn" onclick="goToBays()">◀ Bays</button>
-    </footer>
-  </main>
-</div>
-
-<script>
-const API_URL = "https://script.google.com/macros/s/AKfycbw0gvDgTKFNaGw8YnTJR3g9fT4wF03iiXNWSQnQFOwThWCt1ZME4_DOvo4F0e8D2KD6/exec";
-
-console.log("IPM Scout build 207 loaded");
-
-const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
-
-const bayMap = {
-  "S1":["B1","B2","B3","B4","B5","B6"],
-  "S2":["B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
-  "S3":["B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
-  "S4":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
-  "S5":["B4","B5","B6","B7","B8","B9","B10"],
-  "S6":["B2","B3","B4","B5","B6","B7","B8","B9","B10"],
-  "S7":["B2","B3","B4","B5","B6","B7","B8","B9","B10"],
-  "S8":["B1","B2","B3","B4","B5","B6","B7","B8","B9"],
-  "S9":["B1","B2","B3","B4","B5"],
-  "S9A":["B6","B7","B8","B9","B10","B11","B12"],
-  "S9B":["B6","B7","B8","B9","B10","B11","B12"],
-  "S10A":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"],
-  "S10B":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"]
-};
-
-const sectionOrder = ["S1","S2","S3","S4","S5","S6","S7","S8","S9","S9A","S9B","S10A","S10B"];
-
-let selectedSection = "";
-let selectedBay = "";
-let weekStatus = {};
-let currentWeek = "";
-let currentScout = localStorage.getItem("currentScout") || "";
-
-/*
- * Current-week entry cache.
- * Completed bays can open from this cache instead of requesting Google every time.
- */
-let currentWeekEntries = {};
-let entriesAreLoaded = false;
-let entriesAreLoading = false;
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initializeApp);
-} else {
-  initializeApp();
-}
-
-function initializeApp() {
-  if (currentScout) {
-    showScoutWithPencil();
-    renderSections();
-  } else {
-    selectScout();
-  }
-
-  /*
-   * Load status first so the week and bay colors appear as soon as possible.
-   * Load saved entry details shortly afterward.
-   */
-  setTimeout(() => {
-    loadStatus();
-  }, 50);
-
-  setTimeout(() => {
-    loadCurrentWeekEntries(true);
-  }, 1500);
-
-  /*
-   * Keep both scouts synchronized without sending both requests together.
-   */
-  setInterval(() => {
-    loadStatus();
-
-    setTimeout(() => {
-      loadCurrentWeekEntries(true);
-    }, 1500);
-  }, 30000);
-}
-
-/* ---------- LOAD DATA ---------- */
-
-function loadStatus() {
-  const callbackName =
-    "statusCallback_" +
-    Date.now() +
-    "_" +
-    Math.random().toString(36).slice(2);
-
-  const script = document.createElement("script");
-  let finished = false;
-
-  /*
-   * Apps Script can occasionally take longer to start.
-   * Keep the callback alive long enough for a cold start.
-   */
-  const timeout = setTimeout(() => {
-    if (finished) return;
-
-    console.warn(
-      "Status request is taking longer than expected. Waiting for Apps Script..."
-    );
-  }, 12000);
-
-  const finalTimeout = setTimeout(() => {
-    if (finished) return;
-
-    finished = true;
-    cleanupScript();
-
-    /*
-     * Leave a harmless callback behind briefly so that a very late
-     * JSONP response does not produce "callback is not defined".
-     */
-    window[callbackName] = function() {};
-
-    setTimeout(() => {
-      try {
-        delete window[callbackName];
-      } catch (error) {
-        window[callbackName] = undefined;
-      }
-    }, 60000);
-
-    console.warn(
-      "Could not retrieve shared bay status after 45 seconds."
-    );
-  }, 45000);
-
-  function cleanupScript() {
-    clearTimeout(timeout);
-    clearTimeout(finalTimeout);
-
-    if (script.parentNode) {
-      script.parentNode.removeChild(script);
-    }
-  }
-
-  window[callbackName] = function(data) {
-    if (finished) return;
-
-    finished = true;
-    cleanupScript();
-
-    try {
-      delete window[callbackName];
-    } catch (error) {
-      window[callbackName] = undefined;
-    }
-
-    if (!data || !data.success) {
-      console.warn("Invalid status response:", data);
-      return;
-    }
-
-    weekStatus = data.records || {};
-    currentWeek = data.week || "";
-
-    document.getElementById("weekDisplay").innerHTML =
-      currentWeek ? "Week " + currentWeek : "";
-
-    if (selectedSection && !selectedBay) {
-      renderBayScreen(selectedSection);
-    }
-  };
-
-  script.onerror = function() {
-    if (finished) return;
-
-    finished = true;
-    cleanupScript();
-
-    try {
-      delete window[callbackName];
-    } catch (error) {
-      window[callbackName] = undefined;
-    }
-
-    console.warn("Could not connect to Apps Script for status.");
-  };
-
-  script.src =
-    API_URL +
-    "?action=getStatus" +
-    "&callback=" + callbackName +
-    "&_=" + Date.now();
-
-  document.body.appendChild(script);
-}
-function requestJsonp(action, params = {}, timeoutMs = 45000) {
-  return new Promise((resolve, reject) => {
-    const callbackName =
-      action.replace(/[^a-zA-Z0-9]/g, "") +
-      "Callback_" +
-      Date.now() +
-      "_" +
-      Math.random().toString(36).slice(2);
-
-    const script = document.createElement("script");
-    let finished = false;
-
-    const warningTimeout = setTimeout(() => {
-      if (finished) return;
-
-      console.warn(
-        action + " is taking longer than expected. Waiting for Apps Script..."
-      );
-    }, 12000);
-
-    const finalTimeout = setTimeout(() => {
-      if (finished) return;
-
-      finished = true;
-      cleanupScript();
-
-      /*
-       * Prevent a late JSONP response from throwing a ReferenceError.
-       */
-      window[callbackName] = function() {};
-
-      setTimeout(() => {
-        try {
-          delete window[callbackName];
-        } catch (error) {
-          window[callbackName] = undefined;
-        }
-      }, 60000);
-
-      reject(new Error(action + " request timed out."));
-    }, timeoutMs);
-
-    function cleanupScript() {
-      clearTimeout(warningTimeout);
-      clearTimeout(finalTimeout);
-
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    }
-
-    window[callbackName] = function(data) {
-      if (finished) return;
-
-      finished = true;
-      cleanupScript();
-
-      try {
-        delete window[callbackName];
-      } catch (error) {
-        window[callbackName] = undefined;
-      }
-
-      resolve(data);
-    };
-
-    script.onerror = function() {
-      if (finished) return;
-
-      finished = true;
-      cleanupScript();
-
-      try {
-        delete window[callbackName];
-      } catch (error) {
-        window[callbackName] = undefined;
-      }
-
-      reject(new Error("Could not connect to Apps Script."));
-    };
-
-    const query = new URLSearchParams();
-    query.append("action", action);
-    query.append("callback", callbackName);
-    query.append("_", Date.now());
-
-    Object.keys(params).forEach(key => {
-      query.append(key, params[key]);
-    });
-
-    script.src = API_URL + "?" + query.toString();
-    document.body.appendChild(script);
-  });
-}
-
-async function loadCurrentWeekEntries(force = false) {
-  if (entriesAreLoading) {
-    return false;
-  }
-
-  if (entriesAreLoaded && !force) {
-    return true;
-  }
-
-  entriesAreLoading = true;
-
+function doGet(e) {
   try {
-    const data = await requestJsonp(
-      "getCurrentWeekEntries",
-      {},
-      45000
-    );
+    const parameters = e && e.parameter ? e.parameter : {};
+    const action = parameters.action || "";
+    const callback = parameters.callback || "";
 
-    if (
-      !data ||
-      !data.success ||
-      typeof data.entries !== "object" ||
-      data.entries === null
-    ) {
-      console.warn(
-        "Current-week entries were not returned by Apps Script:",
-        data
+    let result = {
+      success: true,
+      message: "IPM Scout API is working"
+    };
+
+    if (action === "getStatus") {
+      result = getStatus();
+
+    } else if (action === "getEntry") {
+      result = getEntry(
+        parameters.section || "",
+        parameters.bay || ""
       );
 
-      return false;
+    } else if (action === "getCurrentWeekEntries") {
+      result = getCurrentWeekEntries();
+
+    } else if (action === "getDashboard") {
+      result = getDashboard();
+
+    } else if (action === "getHeatMaps") {
+      result = getHeatMaps();
+
+    } else if (action === "getAppData") {
+      result = getAppData();
+
+    } else if (action === "rebuildCurrentWeek") {
+      result = rebuildCurrentWeekFromScoutData();
     }
 
-    currentWeekEntries = data.entries;
-    entriesAreLoaded = true;
-
-    weekStatus = {};
-
-    Object.keys(currentWeekEntries).forEach(key => {
-      weekStatus[key] = currentWeekEntries[key].status;
-    });
-
-    if (data.week) {
-      currentWeek = data.week;
-      document.getElementById("weekDisplay").innerHTML =
-        "Week " + currentWeek;
-    }
-
-    if (selectedSection && !selectedBay) {
-      renderBayScreen(selectedSection);
-    }
-
-    return true;
+    return createGetResponse(result, callback);
 
   } catch (error) {
-    console.warn(
-      "Could not load current-week entries:",
-      error
-    );
-
-    return false;
-
-  } finally {
-    entriesAreLoading = false;
-  }
-}
-
-async function loadDashboard() {
-  const page = document.getElementById("dashboardPage");
-
-  page.innerHTML = `
-    <h2>Dashboard</h2>
-    <div class="dashboard-card" style="text-align:center;font-weight:700;color:#64748b;">
-      Loading dashboard...
-    </div>
-  `;
-
-  try {
-    const data = await requestJsonp("getDashboard", {}, 45000);
-    renderDashboard(data);
-  } catch (error) {
-    console.error("Dashboard load failed:", error);
-
-    page.innerHTML = `
-      <h2>Dashboard</h2>
-      <div class="dashboard-card" style="text-align:center;color:#dc2626;font-weight:700;">
-        Could not load dashboard data.
-        <br><br>
-        <button class="download-btn" onclick="loadDashboard()">Try Again</button>
-      </div>
-    `;
-  }
-}
-
-async function loadHeatMaps() {
-  const page = document.getElementById("heatmapsPage");
-
-  page.innerHTML = `
-    <h2>Heat Maps</h2>
-    <div class="dashboard-card" style="text-align:center;font-weight:700;color:#64748b;">
-      Loading heat maps...
-    </div>
-  `;
-
-  try {
-    const data = await requestJsonp("getHeatMaps", {}, 45000);
-    renderHeatMaps(data);
-  } catch (error) {
-    console.error("Heat map load failed:", error);
-
-    page.innerHTML = `
-      <h2>Heat Maps</h2>
-      <div class="dashboard-card" style="text-align:center;color:#dc2626;font-weight:700;">
-        Could not load heat map data.
-        <br><br>
-        <button class="download-btn" onclick="loadHeatMaps()">Try Again</button>
-      </div>
-    `;
-  }
-}
-
-/* ---------- PAGE NAVIGATION ---------- */
-
-function showPage(page) {
-  document.getElementById("scoutPage").style.display = "none";
-  document.getElementById("dashboardPage").style.display = "none";
-  document.getElementById("heatmapsPage").style.display = "none";
-  document.getElementById("reportsPage").style.display = "none";
-
-  document.querySelectorAll(".nav-link").forEach(link => {
-    link.classList.remove("active");
-  });
-
-  if (page === "scout") {
-    document.getElementById("scoutPage").style.display = "block";
-    document.querySelectorAll(".nav-link")[0].classList.add("active");
-    renderSections();
-  }
-
-  if (page === "dashboard") {
-    document.getElementById("dashboardPage").style.display = "block";
-    document.querySelectorAll(".nav-link")[1].classList.add("active");
-    updateBottomBar("sections");
-    showScoutNameOnly();
-    loadDashboard();
-  }
-
-  if (page === "heatmaps") {
-    document.getElementById("heatmapsPage").style.display = "block";
-    document.querySelectorAll(".nav-link")[2].classList.add("active");
-    updateBottomBar("sections");
-    showScoutNameOnly();
-    loadHeatMaps();
-  }
-
-if (page === "reports") {
-  document.getElementById("reportsPage").style.display = "block";
-  document.querySelectorAll(".nav-link")[3].classList.add("active");
-  updateBottomBar("sections");
-  showScoutNameOnly();
-  renderReportsPage();
-}
-}
-
-/* ---------- SCOUT NAME ---------- */
-
-function selectScout() {
-  let html = `
-    <h2>Scout Name</h2>
-
-    <input
-      id="scoutNameInput"
-      class="scout-input"
-      type="text"
-      placeholder="Enter your name"
-    >
-
-    <button class="save-btn" onclick="saveScoutName()">
-      Continue
-    </button>
-  `;
-
-  document.getElementById("sectionContainer").innerHTML = html;
-}
-
-function saveScoutName() {
-  const name = document.getElementById("scoutNameInput").value.trim();
-
-  if (!name) {
-    alert("Please enter your name.");
-    return;
-  }
-
-  currentScout = name;
-  localStorage.setItem("currentScout", name);
-
-  showScoutWithPencil();
-  renderSections();
-}
-
-function showScoutWithPencil() {
-  document.getElementById("currentScout").innerHTML =
-    `Scout: ${currentScout}&nbsp;<span class="edit-scout-btn" onclick="changeScout()">✎</span>`;
-}
-
-function showScoutNameOnly() {
-  document.getElementById("currentScout").innerHTML =
-    `Scout: ${currentScout}`;
-}
-
-function changeScout() {
-  localStorage.removeItem("currentScout");
-  currentScout = "";
-  document.getElementById("currentScout").innerHTML = "";
-  selectScout();
-}
-
-/* ---------- SCOUT PAGE ---------- */
-
-function renderSections() {
-  selectedSection = "";
-  selectedBay = "";
-
-  updateBottomBar("sections");
-  showScoutWithPencil();
-
-  document.getElementById("bayContainer").innerHTML = "";
-  document.getElementById("entryContainer").innerHTML = "";
-
-  let html = `<h2>Select Section</h2><div class="grid section-grid">`;
-
-  sectionOrder.forEach(section => {
-    html += `
-      <button class="btn" onclick="showBays('${section}')">
-        ${section}
-      </button>
-    `;
-  });
-
-  html += `</div>`;
-  document.getElementById("sectionContainer").innerHTML = html;
-}
-
-function showBays(section) {
-  selectedSection = section;
-  selectedBay = "";
-
-  /*
-   * Open immediately using the data already loaded in memory.
-   */
-  renderBayScreen(section);
-}
-
-function renderBayScreen(section) {
-  if (!bayMap[section]) {
-    console.error("Section not found:", section);
-    return;
-  }
-
-  const progress = getSectionPercent(section);
-
-  updateBottomBar("bays");
-  showScoutNameOnly();
-
-  document.getElementById("sectionContainer").innerHTML = "";
-  document.getElementById("entryContainer").innerHTML = "";
-
-  let html = `
-    <h2>${section} - Select Bay</h2>
-
-    <div class="section-percent">
-      Progress: ${progress}%
-    </div>
-
-    <div class="grid bay-grid">
-  `;
-
-  bayMap[section].forEach(bay => {
-    const statusClass =
-      getBayStatus(section, bay);
-
-    html += `
-      <button
-        class="btn ${statusClass}"
-        onclick="handleBayClick('${bay}')"
-      >
-        ${bay}
-      </button>
-    `;
-  });
-
-  html += `</div>`;
-
-  document.getElementById("bayContainer").innerHTML = html;
-}
-
-function getSectionPercent(section) {
-  const total = bayMap[section].length;
-  let completed = 0;
-
-  bayMap[section].forEach(bay => {
-    const key = section + "|" + bay;
-
-    if (weekStatus[key] === "Scouted" || weekStatus[key] === "Empty") {
-      completed++;
-    }
-  });
-
-  return Math.round((completed / total) * 100);
-}
-
-function getBayStatus(section, bay) {
-  const key = section + "|" + bay;
-  const status = weekStatus[key];
-
-  if (status === "Scouted") return "scouted";
-  if (status === "Empty") return "empty";
-
-  return "not-scouted";
-}
-
-function getEntryData(section, bay) {
-  return new Promise((resolve, reject) => {
-    const callbackName =
-      "entryCallback_" +
-      Date.now() +
-      "_" +
-      Math.random().toString(36).slice(2);
-
-    const script = document.createElement("script");
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Saved entry request timed out."));
-    }, 8000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-
-      try {
-        delete window[callbackName];
-      } catch (error) {
-        window[callbackName] = undefined;
-      }
-    }
-
-    window[callbackName] = function(data) {
-      cleanup();
-      resolve(data);
-    };
-
-    script.onerror = function() {
-      cleanup();
-      reject(new Error("Could not connect to Apps Script."));
-    };
-
-    script.src =
-      API_URL +
-      "?action=getEntry" +
-      "&section=" + encodeURIComponent(section) +
-      "&bay=" + encodeURIComponent(bay) +
-      "&callback=" + callbackName +
-      "&_=" + Date.now();
-
-    document.body.appendChild(script);
-  });
-}
-
-async function handleBayClick(bay) {
-  const sectionAtOpen = selectedSection;
-  const key = sectionAtOpen + "|" + bay;
-  const status = weekStatus[key];
-
-  if (status !== "Scouted" && status !== "Empty") {
-    showEntry(bay);
-    return;
-  }
-
-  const answer = confirm(
-    "This bay was already entered this week.\n\nDo you want to modify it?"
-  );
-
-  if (!answer) return;
-
-  /*
-   * Open immediately from the current-week cache when available.
-   */
-  const cachedEntry = currentWeekEntries[key];
-
-  if (cachedEntry) {
-    showEntry(bay, cachedEntry);
-    return;
-  }
-
-  selectedBay = bay;
-  updateBottomBar("entry");
-  showScoutNameOnly();
-
-  document.getElementById("bayContainer").innerHTML = `
-    <div class="dashboard-card" style="text-align:center;padding:28px;color:#64748b;font-weight:700;">
-      Loading saved entry...
-    </div>
-  `;
-
-  try {
-    /*
-     * First try to finish loading the whole current-week cache.
-     */
-    await loadCurrentWeekEntries();
-
-    if (
-      selectedSection !== sectionAtOpen ||
-      selectedBay !== bay
-    ) {
-      return;
-    }
-
-    if (currentWeekEntries[key]) {
-      showEntry(bay, currentWeekEntries[key]);
-      return;
-    }
-
-    /*
-     * Fallback for an entry that was not yet in the shared cache.
-     */
-    const entryData = await getEntryData(sectionAtOpen, bay);
-
-    if (
-      selectedSection !== sectionAtOpen ||
-      selectedBay !== bay
-    ) {
-      return;
-    }
-
-    currentWeekEntries[key] = entryData;
-    showEntry(bay, entryData);
-
-  } catch (error) {
-    console.error("Could not load saved entry:", error);
-
-    document.getElementById("bayContainer").innerHTML = `
-      <div class="dashboard-card" style="text-align:center;padding:24px;color:#dc2626;font-weight:700;">
-        Could not load the saved entry.<br><br>
-        <button class="btn" onclick="showBays('${sectionAtOpen}')">
-          Return to Bays
-        </button>
-      </div>
-    `;
-  }
-}
-
-function showEntry(bay, entryData = null) {
-  selectedBay = bay;
-
-  updateBottomBar("entry");
-  showScoutNameOnly();
-
-  document.getElementById("bayContainer").innerHTML = "";
-
-  let html = `<h2>${selectedSection} - ${selectedBay}</h2>`;
-
-  pests.forEach(pest => {
-    const savedValue =
-      entryData && entryData.counts[pest] !== ""
-        ? entryData.counts[pest]
+    const callback =
+      e && e.parameter
+        ? e.parameter.callback || ""
         : "";
 
-    html += `
-      <div class="entry-row">
-        <label>${pest}</label>
-        <input type="number" min="0" placeholder="0" value="${savedValue}" data-pest="${pest}">
-      </div>
-    `;
-  });
-
-  const savedNotes = entryData ? entryData.notes || "" : "";
-  const lastUpdated = entryData && entryData.lastUpdated
-    ? new Date(entryData.lastUpdated).toLocaleString()
-    : "";
-  const lastScout = entryData && entryData.lastScout
-    ? entryData.lastScout
-    : "";
-
-  html += `
-    <label><strong>Notes</strong></label>
-    <textarea id="notes" placeholder="Crop, location, treatment, beneficials...">${savedNotes}</textarea>
-
-    <button class="save-btn" onclick="saveCounts()">Save Counts</button>
-    <button class="empty-btn" onclick="saveEmptyBay()">No Plants</button>
-
-    ${lastUpdated ? `<div class="last-updated">Last updated: ${lastScout ? lastScout + " - " : ""}${lastUpdated}</div>` : ""}
-
-    <div id="message" class="message"></div>
-  `;
-
-  document.getElementById("entryContainer").innerHTML = html;
-}
-
-function sendToSheet(params) {
-  const formData = new URLSearchParams();
-
-  Object.keys(params).forEach(key => {
-    formData.append(key, params[key]);
-  });
-
-  fetch(API_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: formData.toString()
-  }).catch(error => {
-    console.error("Background submission failed:", error);
-  });
-}
-
-function saveCounts() {
-  const values = {};
-
-  document.querySelectorAll("#entryContainer input").forEach(input => {
-    values[input.dataset.pest] = input.value;
-  });
-
-  const sectionAtSave = selectedSection;
-  const bayAtSave = selectedBay;
-  const key = sectionAtSave + "|" + bayAtSave;
-  const message = document.getElementById("message");
-  const notes = document.getElementById("notes");
-
-  if (!message) return;
-
-  message.innerHTML = "Sending...";
-  message.className = "message";
-
-  try {
-    sendToSheet({
-      scout: currentScout,
-      section: sectionAtSave,
-      bay: bayAtSave,
-      status: "Scouted",
-      thrips: values["Thrips"] || 0,
-      aphids: values["Aphids"] || 0,
-      whiteflies: values["Whiteflies"] || 0,
-      fungusGnats: values["Fungus Gnats"] || 0,
-      notes: notes ? notes.value : ""
-    });
-
-    weekStatus[key] = "Scouted";
-
-    currentWeekEntries[key] = {
-      section: sectionAtSave,
-      bay: bayAtSave,
-      status: "Scouted",
-      counts: {
-        "Thrips": Number(values["Thrips"] || 0),
-        "Aphids": Number(values["Aphids"] || 0),
-        "Whiteflies": Number(values["Whiteflies"] || 0),
-        "Fungus Gnats": Number(values["Fungus Gnats"] || 0)
+    return createGetResponse(
+      {
+        success: false,
+        message: error.message
       },
-      notes: notes ? notes.value : "",
-      lastUpdated: new Date().toISOString(),
-      lastScout: currentScout
-    };
-
-    message.innerHTML = "✓ Submitted";
-    message.className = "message success-message";
-
-    setTimeout(() => {
-      selectedBay = "";
-      showBays(sectionAtSave);
-    }, 250);
-
-    setTimeout(() => {
-      loadStatus();
-      loadCurrentWeekEntries(true);
-    }, 1800);
-  } catch (error) {
-    console.error("Submission failed:", error);
-    message.innerHTML = "Submission failed. Please check your connection.";
-    message.className = "message error-message";
+      callback
+    );
   }
 }
 
-function saveEmptyBay() {
-  const sectionAtSave = selectedSection;
-  const bayAtSave = selectedBay;
-  const key = sectionAtSave + "|" + bayAtSave;
-  const message = document.getElementById("message");
-  const notes = document.getElementById("notes");
+/* ==================================================
+   SAVE DATA
 
-  if (!message) return;
+   Scout_Data remains the permanent history.
+   Current_Week keeps one latest row per bay.
+================================================== */
 
-  message.innerHTML = "Sending...";
-  message.className = "message";
+function doPost(e) {
+  const lock = LockService.getScriptLock();
 
   try {
-    sendToSheet({
-      scout: currentScout,
-      section: sectionAtSave,
-      bay: bayAtSave,
-      status: "Empty",
-      notes: notes && notes.value ? notes.value : "No plants"
-    });
-
-    weekStatus[key] = "Empty";
-
-    currentWeekEntries[key] = {
-      section: sectionAtSave,
-      bay: bayAtSave,
-      status: "Empty",
-      counts: {
-        "Thrips": "",
-        "Aphids": "",
-        "Whiteflies": "",
-        "Fungus Gnats": ""
-      },
-      notes: notes && notes.value ? notes.value : "No plants",
-      lastUpdated: new Date().toISOString(),
-      lastScout: currentScout
-    };
-
-    message.innerHTML = "✓ Empty bay submitted";
-    message.className = "message success-message";
-
-    setTimeout(() => {
-      selectedBay = "";
-      showBays(sectionAtSave);
-    }, 250);
-
-    setTimeout(() => {
-      loadStatus();
-      loadCurrentWeekEntries(true);
-    }, 1800);
-  } catch (error) {
-    console.error("Empty bay submission failed:", error);
-    message.innerHTML = "Submission failed. Please check your connection.";
-    message.className = "message error-message";
-  }
-}
-
-/* ---------- DASHBOARD ---------- */
-
-function renderDashboard(data) {
-  if (!data || !data.success) {
-    document.getElementById("dashboardPage").innerHTML =
-      "<h2>Dashboard</h2><p>Could not load dashboard data.</p>";
-    return;
-  }
-
-  const sectionData = data.sectionData;
-  const hotspots = data.hotspots;
-
-  let html = `
-    <h2>Dashboard</h2>
-
-    <div class="dashboard-card">
-      <div class="dashboard-title">Week ${data.week}</div>
-      <div class="dashboard-percent">${data.progress}% Complete</div>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width:${data.progress}%"></div>
-      </div>
-    </div>
-
-    <div class="dashboard-card">
-      <h3>Section Completion</h3>
-  `;
-
-  Object.keys(sectionData).forEach(section => {
-    html += `
-      <div class="section-row">
-        <span>${section}</span>
-        <div class="small-progress">
-          <div class="small-fill" style="width:${sectionData[section].progress}%"></div>
-        </div>
-        <strong>${sectionData[section].progress}%</strong>
-      </div>
-    `;
-  });
-
-  html += `
-    </div>
-
-    <div class="dashboard-card">
-      <h3>Hotspots</h3>
-      <div class="hotspot-grid">
-  `;
-
-  Object.keys(hotspots).forEach(pest => {
-    const pestClass = {
-      "Thrips": "hotspot-thrips",
-      "Aphids": "hotspot-aphids",
-      "Whiteflies": "hotspot-whiteflies",
-      "Fungus Gnats": "hotspot-fungus"
-    }[pest];
-
-    html += `
-      <div class="hotspot-card ${pestClass}">
-        <div class="hotspot-pest">${pest}</div>
-        <strong>${hotspots[pest].section}</strong>
-        <span>${hotspots[pest].value}</span>
-      </div>
-    `;
-  });
-
-  html += `
-      </div>
-    </div>
-
-    <div class="dashboard-card">
-      <h3>Sections With Pest Activity</h3>
-
-      <table class="pest-table">
-        <tr>
-          <th>Sec</th>
-          <th>TR</th>
-          <th>AP</th>
-          <th>WF</th>
-          <th>FG</th>
-        </tr>
-  `;
-
-  Object.keys(sectionData).forEach(section => {
-    const p = sectionData[section].pests;
-
-    const total =
-      p["Thrips"] +
-      p["Aphids"] +
-      p["Whiteflies"] +
-      p["Fungus Gnats"];
-
-    if (total === 0) return;
-
-    html += `
-      <tr>
-        <td>${section}</td>
-        <td>${p["Thrips"]}</td>
-        <td>${p["Aphids"]}</td>
-        <td>${p["Whiteflies"]}</td>
-        <td>${p["Fungus Gnats"]}</td>
-      </tr>
-    `;
-  });
-
-  html += `
-      </table>
-
-      <div class="pest-legend">
-        TR = Thrips | AP = Aphids | WF = Whiteflies | FG = Fungus Gnats
-      </div>
-    </div>
-  `;
-
-  document.getElementById("dashboardPage").innerHTML = html;
-}
-
-/* ---------- HEAT MAPS ---------- */
-
-function getThripsColor(v) {
-  if (v >= 120) return "#7F0000";
-  if (v >= 100) return "#A30000";
-  if (v >= 80)  return "#C40000";
-  if (v >= 65)  return "#D94715";
-  if (v >= 50)  return "#E96E21";
-  if (v >= 35)  return "#F08E2E";
-  if (v >= 25)  return "#EBC46A";
-  if (v >= 15)  return "#F6E8B1";
-  return "#FFFFFF";
-}
-
-function getFungusColor(v) {
-  if (v >= 1500) return "#1B5E20";
-  if (v >= 1200) return "#2E7D32";
-  if (v >= 900)  return "#3E8E41";
-  if (v >= 700)  return "#5E9E45";
-  if (v >= 500)  return "#7CB342";
-  if (v >= 300)  return "#A5C85A";
-  if (v >= 100)  return "#C5D97A";
-  if (v > 0)     return "#E6EFC1";
-  return "#F8F8F8";
-}
-
-function getAphidColor(v) {
-
-  if (v >= 80) return "#8A5A00";   // dark amber
-  if (v >= 60) return "#A66A00";
-  if (v >= 40) return "#C88719";
-  if (v >= 25) return "#DDAA3A";
-  if (v >= 15) return "#E8C86A";
-  if (v >= 10) return "#F1DE9A";
-  if (v >= 5)  return "#F7EBC3";
-  return "#FFF8E6";
-
-}
-function getWhiteflyColor(v) {
-
-  if (v >= 50) return "#7A3E00";
-  if (v >= 35) return "#A55200";
-  if (v >= 25) return "#C96B00";
-  if (v >= 15) return "#E58A00";
-  if (v >= 10) return "#F2B441";
-  if (v >= 5)  return "#F8D78A";
-
-  return "#FFF5DD";
-}
-
- 
-function getTextColor(backgroundColor) {
-const darkColors = [
-  "#8A5A00",
-  "#A66A00",
-  "#C88719",
-  "#7F0000",
-  "#A30000",
-  "#C40000",
-  "#1B5E20",
-  "#2E7D32",
-  "#3E8E41"
-];
-
-  return darkColors.includes(backgroundColor) ? "white" : "#111827";
-}
-
-function buildHotspotsFromBayCounts(bayCounts, pest, threshold) {
-  const hotspots = [];
-
-  Object.keys(bayCounts || {}).forEach(section => {
-    Object.keys(bayCounts[section] || {}).forEach(bay => {
-      const bayData = bayCounts[section][bay] || {};
-      const value = Number(bayData[pest] || 0);
-
-      if (value >= threshold) {
-        hotspots.push({
-          label: section + bay,
-          count: value
-        });
-      }
-    });
-  });
-
-  hotspots.sort((a, b) => b.count - a.count);
-  return hotspots;
-}
-
-function chunkArray(array, size) {
-  const chunks = [];
-
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-
-  return chunks;
-}
-
-function renderSummaryHotspots(title, threshold, hotspotList) {
-  const count = hotspotList ? hotspotList.length : 0;
-  const topItems = hotspotList ? hotspotList.slice(0, 5) : [];
-
-  let html = `
-    <div class="dashboard-card">
-      <h3>${title}</h3>
-      <div class="dashboard-percent">${count} Bays</div>
-      <div class="heat-subtitle">Threshold ≥ ${threshold}</div>
-  `;
-
-  if (count === 0) {
-    html += `<p>No hotspots above threshold this week.</p>`;
-  } else {
-    topItems.forEach(item => {
-      html += `
-        <div class="section-row">
-          <span>${item.label}</span>
-          <div class="small-progress">
-            <div class="small-fill" style="width:100%"></div>
-          </div>
-          <strong>${item.count}</strong>
-        </div>
-      `;
-    });
-  }
-
-  html += `</div>`;
-  return html;
-}
-function renderExportStrip(title, subtitle, items, pest, perRow = 10) {
-
-  if (!items || items.length === 0) {
-    return "";
-  }
-
-  let html = `
-    <div class="export-strip-section">
-      <div class="export-strip-title">
-        <span>${title}</span>
-        <em>${subtitle}</em>
-      </div>
-  `;
-
-  const rows = chunkArray(items, perRow);
-
-  rows.forEach(row => {
-    html += `<div class="export-strip-row">`;
-
-    row.forEach(item => {
-      let color = "#FFFFFF";
-
-      if (pest === "Thrips") {
-        color = getThripsColor(item.count);
-      }
-
-      if (pest === "Aphids") {
-        color = getAphidColor(item.count);
-      }
-
-      if (pest === "Whiteflies") {
-        color = getWhiteflyColor(item.count);
-      }
-
-      const textColor = getTextColor(color);
-
-      html += `
-        <div
-          class="export-strip-cell"
-          style="background:${color}; color:${textColor};"
-        >
-          <strong>${item.count}</strong>
-          <span>${item.label}</span>
-        </div>
-      `;
-    });
-
-    html += `</div>`;
-  });
-
-  html += `</div>`;
-  return html;
-}
-function renderHeatMaps(data) {
-  if (!data || !data.success) {
-    document.getElementById("heatmapsPage").innerHTML =
-      "<h2>Heat Maps</h2><p>Could not load heat map data.</p>";
-    return;
-  }
-
-  const fungusData = data.fungusGnatsBySection || {};
-  const bayCounts = data.bayCounts || {};
-
-  const thripsHotspots =
-    data.thripsHotspots && data.thripsHotspots.length
-      ? data.thripsHotspots
-      : buildHotspotsFromBayCounts(bayCounts, "Thrips", 15);
-
-  const aphidsHotspots =
-    data.aphidsHotspots && data.aphidsHotspots.length
-      ? data.aphidsHotspots
-      : buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
-
-  const whitefliesHotspots =
-  data.whitefliesHotspots && data.whitefliesHotspots.length
-    ? data.whitefliesHotspots
-    : buildHotspotsFromBayCounts(bayCounts, "Whiteflies", 5);
-
-  let html = `
-    <h2>Heat Maps</h2>
-
-    <button class="download-btn" onclick="downloadHeatMap()">Download Presentation PNG</button>
-
-    <div class="dashboard-card">
-      <h3>Fungus Gnats</h3>
-      <div class="heat-subtitle">Section Total Counts</div>
-      <div class="heat-row">
-  `;
-
-  sectionOrder.forEach(section => {
-    const value =
-      fungusData[section] && fungusData[section]["Fungus Gnats"]
-        ? fungusData[section]["Fungus Gnats"]
-        : 0;
-
-    const color = getFungusColor(value);
-    const textColor = getTextColor(color);
-
-    html += `
-      <div
-        class="heat-cell"
-        style="background:${color}; color:${textColor};"
-      >
-        <strong>${value}</strong>
-        <span>${section}</span>
-      </div>
-    `;
-  });
-
-  html += `
-      </div>
-    </div>
-  `;
-
-  html += renderSummaryHotspots("Thrips Hotspots", 15, thripsHotspots);
-  html += renderSummaryHotspots("Aphids Hotspots", 5, aphidsHotspots);
-  html += renderSummaryHotspots("Whiteflies Hotspots", 5, whitefliesHotspots);
-
-  html += `
-   <div id="heatMapExport"
-     style="position:absolute; left:-99999px; top:0; width:1900px;">
-      
-      <div class="export-strip-section">
-        <div class="export-strip-title">
-          <span>Fungus Gnats</span>
-          <em>Section Total Counts</em>
-        </div>
-
-        <div class="export-strip-row">
-  `;
-
-  sectionOrder.forEach(section => {
-    const value =
-      fungusData[section] && fungusData[section]["Fungus Gnats"]
-        ? fungusData[section]["Fungus Gnats"]
-        : 0;
-
-    const color = getFungusColor(value);
-    const textColor = getTextColor(color);
-
-    html += `
-      <div
-        class="export-strip-cell"
-        style="background:${color}; color:${textColor};"
-      >
-        <strong>${value}</strong>
-        <span>${section}</span>
-      </div>
-    `;
-  });
-
-  html += `
-        </div>
-      </div>
-  `;
-
-  html += renderExportStrip(
-    "Thrips",
-    "Bays Above Threshold (≥15)",
-    thripsHotspots,
-    "Thrips",
-    10
-  );
-
-  html += renderExportStrip(
-    "Aphids",
-    "Bays Above Threshold (≥5)",
-    aphidsHotspots,
-    "Aphids",
-    10
-  );
-html += renderExportStrip(
-  "Whiteflies",
-  "Bays Above Threshold (≥5)",
-  whitefliesHotspots,
-  "Whiteflies",
-  10
-);
-  html += `
-    </div>
-  `;
-
-  document.getElementById("heatmapsPage").innerHTML = html;
-}
-function renderReportsPage() {
-  document.getElementById("reportsPage").innerHTML = `
-    <h2>Reports</h2>
-
-    <div class="dashboard-card">
-      <h3>Growers Weekly Report</h3>
-
-      <p style="color:#64748b;font-weight:700;">
-        Slide-ready weekly IPM report with hot spots and key insights.
-      </p>
-
-      <button class="download-btn" onclick="loadGrowersReport()">
-        Generate Growers Weekly Report
-      </button>
-    </div>
-
-    <div id="growersReportPreview"></div>
-  `;
-}
-
-  async function loadGrowersReport() {
-  const preview = document.getElementById("growersReportPreview");
-
-  preview.innerHTML = `
-    <div class="dashboard-card" style="text-align:center;font-weight:700;color:#64748b;">
-      Generating report...
-    </div>
-  `;
-
-  try {
-    const data = await requestJsonp("getHeatMaps", {}, 45000);
-    renderGrowersReport(data);
-  } catch (error) {
-    console.error("Growers report load failed:", error);
-
-    preview.innerHTML = `
-      <div class="dashboard-card" style="text-align:center;color:#dc2626;font-weight:700;">
-        Could not generate the report.
-        <br><br>
-        <button class="download-btn" onclick="loadGrowersReport()">Try Again</button>
-      </div>
-    `;
-  }
-}
-
-  function renderGrowersReport(data) {
-  if (!data || !data.success) {
-    document.getElementById("growersReportPreview").innerHTML =
-      `<div class="dashboard-card">Could not load report data.</div>`;
-    return;
-  }
-
-  const fungusData = data.fungusGnatsBySection || {};
-  const bayCounts = data.bayCounts || {};
-
-  const thripsHotspots = buildHotspotsFromBayCounts(bayCounts, "Thrips", 15);
-  const whitefliesHotspots = buildHotspotsFromBayCounts(bayCounts, "Whiteflies", 5);
-  const aphidsHotspots = buildHotspotsFromBayCounts(bayCounts, "Aphids", 5);
-const totalHotspotRows =
-  1 +
-  Math.ceil(thripsHotspots.length / 10) +
-  Math.ceil(whitefliesHotspots.length / 10) +
-  Math.ceil(aphidsHotspots.length / 10);
-
-const availableHeight = 610;
-
-const stripHeight = Math.max(
-  26,
-  Math.min(62, Math.floor(availableHeight / totalHotspotRows))
-);
-
-const stripLabelTop = stripHeight + 5;
-const stripValueSize = Math.max(13, Math.floor(stripHeight * 0.36));
-const stripLabelSize = Math.max(8, Math.floor(stripHeight * 0.20));
-  let html = `
-    <button class="download-btn" onclick="downloadGrowersReport()">
-      Download Growers Weekly Report PNG
-    </button>
-
-    <div id="growersReportExport"
-     class="growers-slide-report"
-     style="
-       --strip-height:${stripHeight}px;
-       --strip-label-top:${stripLabelTop}px;
-       --strip-value-size:${stripValueSize}px;
-       --strip-label-size:${stripLabelSize}px;
-     ">
-
-
-<div class="growers-slide-header">
-  <div></div>
-  <h1>WEEK ${Number(data.week) - 1}</h1>
-  <div class="growers-ipm-logo">IPM</div>
-</div>
-
-      <div class="growers-slide-body">
-
-        <div class="growers-hotspots-box">
-          <div class="growers-hotspots-label">Hot Spots</div>
-
-          <div class="growers-heatmap-area">
-  `;
-
-  html += `
-    <div class="export-strip-section">
-      <div class="export-strip-title">
-        <span>Fungus Gnats</span>
-        <em>Section Total Counts</em>
-      </div>
-      <div class="export-strip-row">
-  `;
-
-  sectionOrder.forEach(section => {
-    const value =
-      fungusData[section] && fungusData[section]["Fungus Gnats"]
-        ? fungusData[section]["Fungus Gnats"]
-        : 0;
-
-    const color = getFungusColor(value);
-    const textColor = getTextColor(color);
-
-    html += `
-      <div class="export-strip-cell" style="background:${color}; color:${textColor};">
-        <strong>${value}</strong>
-        <span>${section}</span>
-      </div>
-    `;
-  });
-
-  html += `</div></div>`;
-
-  html += renderExportStrip("Thrips", "Bays Above Threshold (≥15)", thripsHotspots, "Thrips", 10);
-  html += renderExportStrip("Whiteflies", "Bays Above Threshold (≥5)", whitefliesHotspots, "Whiteflies", 10);
-  html += renderExportStrip("Aphids", "Bays Above Threshold (≥5)", aphidsHotspots, "Aphids", 10);
-
-  html += `
-          </div>
-        </div>
-
-        <div class="growers-insights-box">
-          <div class="growers-insights-header">KEY INSIGHTS</div>
-
-          ${renderInsightItem("fungus", "FUNGUS GNATS", getFungusInsight(fungusData))}
-          ${renderInsightItem("thrips", "THRIPS", getInsightText("Thrips", thripsHotspots))}
-          ${renderInsightItem("aphids", "APHIDS", getInsightText("Aphids", aphidsHotspots))}
-          ${renderInsightItem("whiteflies", "WHITEFLIES", getInsightText("Whiteflies", whitefliesHotspots))}
-        </div>
-
-      </div>
-    </div>
-  `;
-
-  document.getElementById("growersReportPreview").innerHTML = html;
-}
-function getInsightText(pest, hotspots) {
-  if (!hotspots || hotspots.length === 0) {
-    return "No bays above threshold this week.";
-  }
-
-  const top = hotspots.slice(0, 3).map(item => `${item.label} (${item.count})`);
-
-  return `${hotspots.length} bays above threshold. Highest pressure: ${top.join(", ")}.`;
-}
-function renderInsightItem(type, title, text) {
-
-const iconMap = {
-  fungus: "fungus-gnats.svg",
-  thrips: "thrips.svg",
-  aphids: "aphids.svg",
-  whiteflies: "whiteflies.svg"
-};
-
-  return `
-    <div class="growers-insight-item">
-
-      <div class="growers-icon growers-icon-${type}">
-        <img src="${iconMap[type]}">
-      </div>
-
-      <div>
-        <h4>${title}</h4>
-        <p>${text}</p>
-      </div>
-
-    </div>
-  `;
-}
-
-function getFungusInsight(fungusData) {
-  const items = [];
-
-  Object.keys(fungusData || {}).forEach(section => {
-    const value = Number(fungusData[section]["Fungus Gnats"] || 0);
-    if (value > 0) {
-      items.push({ section, value });
+    if (!lock.tryLock(10000)) {
+      throw new Error(
+        "Another scout is saving data. Please try again."
+      );
     }
-  });
 
-  items.sort((a, b) => b.value - a.value);
+    const parameters = e && e.parameter ? e.parameter : {};
 
-  if (items.length === 0) {
-    return "No significant pressure this week.";
+    const now = new Date();
+    const week = getWeekNumber(now);
+
+    const scout = String(
+      parameters.scout || "Raissa"
+    ).trim();
+
+    const section = normalizeSection(
+      parameters.section || ""
+    );
+
+    const bay = String(
+      parameters.bay || ""
+    ).trim();
+
+    const status = String(
+      parameters.status || "Scouted"
+    ).trim();
+
+    const notes = String(
+      parameters.notes || ""
+    ).trim();
+
+    if (!section) {
+      throw new Error("Section is required.");
+    }
+
+    if (!bay) {
+      throw new Error("Bay is required.");
+    }
+
+    const values = {
+      thrips: toNumber(parameters.thrips),
+      aphids: toNumber(parameters.aphids),
+      whiteflies: toNumber(parameters.whiteflies),
+      fungusGnats: toNumber(parameters.fungusGnats)
+    };
+
+    /*
+     * 1. Append to permanent history.
+     * Previous submissions are not deleted.
+     */
+    appendHistoryRows({
+      now: now,
+      week: week,
+      scout: scout,
+      section: section,
+      bay: bay,
+      status: status,
+      notes: notes,
+      values: values
+    });
+
+    /*
+     * 2. Update one current row for this bay.
+     */
+    upsertCurrentWeekRow({
+      now: now,
+      week: week,
+      scout: scout,
+      section: section,
+      bay: bay,
+      status: status,
+      notes: notes,
+      values: values
+    });
+
+    clearCurrentWeekCaches();
+
+    return createPostResponse({
+      success: true,
+      message:
+        status === "Empty"
+          ? "Empty bay updated"
+          : "Counts updated"
+    });
+
+  } catch (error) {
+    return createPostResponse({
+      success: false,
+      message: error.message
+    });
+
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (error) {
+      // Lock was not acquired or was already released.
+    }
+  }
+}
+
+/* ==================================================
+   RESPONSE HELPERS
+================================================== */
+
+function createGetResponse(result, callback) {
+  if (callback) {
+    return ContentService
+      .createTextOutput(
+        callback +
+        "(" +
+        JSON.stringify(result) +
+        ")"
+      )
+      .setMimeType(
+        ContentService.MimeType.JAVASCRIPT
+      );
   }
 
-  return `Highest pressure in ${items.slice(0, 3).map(x => x.section).join(", ")}.`;
+  return ContentService
+    .createTextOutput(
+      JSON.stringify(result)
+    )
+    .setMimeType(
+      ContentService.MimeType.JSON
+    );
 }
-async function waitForExportImages(element) {
-  const images = Array.from(element.querySelectorAll("img"));
 
-  await Promise.all(
-    images.map(image => {
-      if (image.complete) {
-        return Promise.resolve();
-      }
+function createPostResponse(result) {
+  return ContentService
+    .createTextOutput(
+      JSON.stringify(result)
+    )
+    .setMimeType(
+      ContentService.MimeType.JSON
+    );
+}
 
-      return new Promise(resolve => {
-        image.addEventListener("load", resolve, { once: true });
-        image.addEventListener("error", resolve, { once: true });
-      });
-    })
+/* ==================================================
+   SHEET HELPERS
+================================================== */
+
+function getHistorySheet() {
+  const sheet = SS.getSheetByName(HISTORY_SHEET_NAME);
+
+  if (!sheet) {
+    throw new Error(
+      'Sheet "' + HISTORY_SHEET_NAME + '" was not found.'
+    );
+  }
+
+  return sheet;
+}
+
+function getCurrentWeekSheet() {
+  let sheet = SS.getSheetByName(CURRENT_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = SS.insertSheet(CURRENT_SHEET_NAME);
+  }
+
+  ensureCurrentWeekHeaders(sheet);
+
+  return sheet;
+}
+
+function ensureCurrentWeekHeaders(sheet) {
+  const headers = [[
+    "Week",
+    "Section",
+    "Bay",
+    "Status",
+    "Thrips",
+    "Aphids",
+    "Whiteflies",
+    "FG",
+    "Scout",
+    "Timestamp",
+    "Notes"
+  ]];
+
+  const existing = sheet
+    .getRange(1, 1, 1, CURRENT_COLUMNS)
+    .getValues()[0];
+
+  let needsHeaders = false;
+
+  for (let i = 0; i < headers[0].length; i++) {
+    if (String(existing[i] || "").trim() !== headers[0][i]) {
+      needsHeaders = true;
+      break;
+    }
+  }
+
+  if (needsHeaders) {
+    sheet
+      .getRange(1, 1, 1, CURRENT_COLUMNS)
+      .setValues(headers);
+
+    sheet.setFrozenRows(1);
+  }
+}
+
+function getHistoryData() {
+  const sheet = getHistorySheet();
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    return [];
+  }
+
+  return sheet
+    .getRange(
+      2,
+      1,
+      lastRow - 1,
+      HISTORY_COLUMNS
+    )
+    .getValues();
+}
+
+function getCurrentWeekData() {
+  const sheet = ensureCurrentWeekReady();
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    return [];
+  }
+
+  return sheet
+    .getRange(
+      2,
+      1,
+      lastRow - 1,
+      CURRENT_COLUMNS
+    )
+    .getValues();
+}
+
+/* ==================================================
+   CURRENT WEEK INITIALIZATION / WEEKLY RESET
+
+   If Current_Week is empty or contains an older week,
+   rebuild it from Scout_Data for the present week.
+================================================== */
+
+function ensureCurrentWeekReady() {
+  const sheet = getCurrentWeekSheet();
+  const currentWeek = getWeekNumber(new Date());
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    rebuildCurrentWeekFromScoutData();
+    return sheet;
+  }
+
+  const storedWeek = Number(
+    sheet.getRange(2, 1).getValue() || 0
   );
+
+  if (storedWeek !== currentWeek) {
+    rebuildCurrentWeekFromScoutData();
+  }
+
+  return sheet;
 }
 
-async function downloadElementAsPng(elementId, fileName, backgroundColor = "#ffffff") {
-  const element = document.getElementById(elementId);
+function rebuildCurrentWeekFromScoutData() {
+  const currentSheet = getCurrentWeekSheet();
+  const currentWeek = getWeekNumber(new Date());
+  const historyData = getHistoryData();
 
-  if (!element) {
-    alert("The export figure is not ready yet.");
-    return;
+  /*
+   * Keep only the latest submission for each section/bay.
+   * Scout_Data is ordered chronologically, so later rows
+   * overwrite earlier values in the map.
+   */
+  const entries = {};
+
+  for (let i = 0; i < historyData.length; i++) {
+    const row = historyData[i];
+
+    const timestamp = row[0];
+    const week = Number(row[1] || 0);
+    const scout = String(row[2] || "").trim();
+    const section = normalizeSection(row[3]);
+    const bay = String(row[4] || "").trim();
+    const status = String(row[5] || "").trim();
+    const pest = String(row[6] || "").trim();
+    const count = toNumber(row[7]);
+    const notes = String(row[8] || "").trim();
+
+    if (
+      week !== currentWeek ||
+      !section ||
+      !bay
+    ) {
+      continue;
+    }
+
+    const key = section + "|" + bay;
+
+    if (!entries[key]) {
+      entries[key] = {
+        week: currentWeek,
+        section: section,
+        bay: bay,
+        status: status,
+        thrips: "",
+        aphids: "",
+        whiteflies: "",
+        fungusGnats: "",
+        scout: scout,
+        timestamp: timestamp,
+        notes: notes
+      };
+    }
+
+    entries[key].status = status;
+    entries[key].scout = scout;
+    entries[key].timestamp = timestamp;
+
+    if (notes) {
+      entries[key].notes = notes;
+    }
+
+    if (status === "Empty") {
+      entries[key].thrips = "";
+      entries[key].aphids = "";
+      entries[key].whiteflies = "";
+      entries[key].fungusGnats = "";
+      continue;
+    }
+
+    if (pest === "Thrips") {
+      entries[key].thrips = count;
+    }
+
+    if (pest === "Aphids") {
+      entries[key].aphids = count;
+    }
+
+    if (pest === "Whiteflies") {
+      entries[key].whiteflies = count;
+    }
+
+    if (pest === "Fungus Gnats") {
+      entries[key].fungusGnats = count;
+    }
   }
 
-  if (typeof html2canvas !== "function") {
-    alert("The download library is still loading. Please try again in a moment.");
-    return;
+  /*
+   * Clear only data rows. Headers and formatting remain.
+   */
+  const currentLastRow = currentSheet.getLastRow();
+
+  if (currentLastRow > 1) {
+    currentSheet
+      .getRange(
+        2,
+        1,
+        currentLastRow - 1,
+        CURRENT_COLUMNS
+      )
+      .clearContent();
   }
 
-  const originalStyles = {
-    position: element.style.position,
-    left: element.style.left,
-    top: element.style.top,
-    zIndex: element.style.zIndex,
-    display: element.style.display,
-    visibility: element.style.visibility,
-    overflow: element.style.overflow
+  const rows = Object.keys(entries)
+    .sort()
+    .map(key => {
+      const item = entries[key];
+
+      return [
+        item.week,
+        item.section,
+        item.bay,
+        item.status,
+        item.thrips,
+        item.aphids,
+        item.whiteflies,
+        item.fungusGnats,
+        item.scout,
+        item.timestamp,
+        item.notes
+      ];
+    });
+
+  if (rows.length > 0) {
+    currentSheet
+      .getRange(
+        2,
+        1,
+        rows.length,
+        CURRENT_COLUMNS
+      )
+      .setValues(rows);
+  }
+
+  clearCurrentWeekCaches();
+
+  return {
+    success: true,
+    week: currentWeek,
+    rows: rows.length,
+    message: "Current_Week rebuilt successfully"
+  };
+}
+
+/* ==================================================
+   HISTORY WRITE
+================================================== */
+
+function appendHistoryRows(entry) {
+  const sheet = getHistorySheet();
+
+  let rows = [];
+
+  if (entry.status === "Empty") {
+    rows = [[
+      entry.now,
+      entry.week,
+      entry.scout,
+      entry.section,
+      entry.bay,
+      "Empty",
+      "",
+      "",
+      entry.notes || "No plants"
+    ]];
+
+  } else {
+    rows = [
+      [
+        entry.now,
+        entry.week,
+        entry.scout,
+        entry.section,
+        entry.bay,
+        "Scouted",
+        "Thrips",
+        entry.values.thrips,
+        entry.notes
+      ],
+      [
+        entry.now,
+        entry.week,
+        entry.scout,
+        entry.section,
+        entry.bay,
+        "Scouted",
+        "Aphids",
+        entry.values.aphids,
+        entry.notes
+      ],
+      [
+        entry.now,
+        entry.week,
+        entry.scout,
+        entry.section,
+        entry.bay,
+        "Scouted",
+        "Whiteflies",
+        entry.values.whiteflies,
+        entry.notes
+      ],
+      [
+        entry.now,
+        entry.week,
+        entry.scout,
+        entry.section,
+        entry.bay,
+        "Scouted",
+        "Fungus Gnats",
+        entry.values.fungusGnats,
+        entry.notes
+      ]
+    ];
+  }
+
+  sheet
+    .getRange(
+      sheet.getLastRow() + 1,
+      1,
+      rows.length,
+      HISTORY_COLUMNS
+    )
+    .setValues(rows);
+}
+
+/* ==================================================
+   CURRENT WEEK UPSERT
+================================================== */
+
+function upsertCurrentWeekRow(entry) {
+  const sheet = ensureCurrentWeekReady();
+  const lastRow = sheet.getLastRow();
+
+  let targetRow = -1;
+
+  if (lastRow >= 2) {
+    const keys = sheet
+      .getRange(
+        2,
+        2,
+        lastRow - 1,
+        2
+      )
+      .getValues();
+
+    for (let i = 0; i < keys.length; i++) {
+      const rowSection = normalizeSection(keys[i][0]);
+      const rowBay = String(keys[i][1] || "").trim();
+
+      if (
+        rowSection === entry.section &&
+        rowBay === entry.bay
+      ) {
+        targetRow = i + 2;
+        break;
+      }
+    }
+  }
+
+  const row = [[
+    entry.week,
+    entry.section,
+    entry.bay,
+    entry.status,
+    entry.status === "Empty" ? "" : entry.values.thrips,
+    entry.status === "Empty" ? "" : entry.values.aphids,
+    entry.status === "Empty" ? "" : entry.values.whiteflies,
+    entry.status === "Empty" ? "" : entry.values.fungusGnats,
+    entry.scout,
+    entry.now,
+    entry.notes || (
+      entry.status === "Empty"
+        ? "No plants"
+        : ""
+    )
+  ]];
+
+  if (targetRow === -1) {
+    targetRow = sheet.getLastRow() + 1;
+  }
+
+  sheet
+    .getRange(
+      targetRow,
+      1,
+      1,
+      CURRENT_COLUMNS
+    )
+    .setValues(row);
+}
+
+/* ==================================================
+   GENERAL HELPERS
+================================================== */
+
+function normalizeSection(section) {
+  const value = String(section || "").trim();
+
+  const sectionMap = {
+    "9A": "S9A",
+    "9B": "S9B",
+    "10A": "S10A",
+    "10B": "S10B"
   };
 
-  try {
-    /*
-     * Move hidden export content into the renderable viewport
-     * without displaying it above the app.
-     */
-    element.style.position = "fixed";
-    element.style.left = "0";
-    element.style.top = "0";
-    element.style.zIndex = "-9999";
-    element.style.display = "block";
-    element.style.visibility = "visible";
-    element.style.overflow = "visible";
+  return sectionMap[value] || value;
+}
 
-    await waitForExportImages(element);
+function toNumber(value) {
+  const number = Number(value || 0);
 
-    if (document.fonts && document.fonts.ready) {
-      await document.fonts.ready;
+  return Number.isFinite(number)
+    ? number
+    : 0;
+}
+
+function clearCurrentWeekCaches() {
+  const cache = CacheService.getScriptCache();
+
+  cache.remove(STATUS_CACHE_KEY);
+  cache.remove(ENTRIES_CACHE_KEY);
+}
+
+/* ==================================================
+   WEEK NUMBER
+================================================== */
+
+function getWeekNumber(date) {
+  const d = new Date(
+    Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    )
+  );
+
+  const dayNumber = d.getUTCDay() || 7;
+
+  d.setUTCDate(
+    d.getUTCDate() +
+    4 -
+    dayNumber
+  );
+
+  const yearStart = new Date(
+    Date.UTC(
+      d.getUTCFullYear(),
+      0,
+      1
+    )
+  );
+
+  return Math.ceil(
+    (
+      (
+        (d - yearStart) /
+        86400000
+      ) +
+      1
+    ) /
+    7
+  );
+}
+
+/* ==================================================
+   CURRENT WEEK STATUS
+================================================== */
+
+function getStatus(sharedData) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(STATUS_CACHE_KEY);
+
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const data = sharedData || getCurrentWeekData();
+  const currentWeek = getWeekNumber(new Date());
+  const records = {};
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+
+    const section = normalizeSection(row[1]);
+    const bay = String(row[2] || "").trim();
+    const status = String(row[3] || "").trim();
+
+    if (section && bay) {
+      records[section + "|" + bay] = status;
+    }
+  }
+
+  const result = {
+    success: true,
+    week: currentWeek,
+    records: records
+  };
+
+  cache.put(
+    STATUS_CACHE_KEY,
+    JSON.stringify(result),
+    30
+  );
+
+  return result;
+}
+
+/* ==================================================
+   ALL CURRENT-WEEK ENTRIES
+================================================== */
+
+function getCurrentWeekEntries(sharedData) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(ENTRIES_CACHE_KEY);
+
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const data = sharedData || getCurrentWeekData();
+  const currentWeek = getWeekNumber(new Date());
+  const entries = {};
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+
+    const section = normalizeSection(row[1]);
+    const bay = String(row[2] || "").trim();
+
+    if (!section || !bay) {
+      continue;
     }
 
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const key = section + "|" + bay;
 
-    const canvas = await html2canvas(element, {
-      backgroundColor: backgroundColor,
-      scale: 4,
-      useCORS: true,
-      allowTaint: false,
-      logging: false,
-      width: element.scrollWidth,
-      height: element.scrollHeight,
-      windowWidth: Math.max(document.documentElement.clientWidth, element.scrollWidth),
-      windowHeight: Math.max(document.documentElement.clientHeight, element.scrollHeight)
+    entries[key] = {
+      section: section,
+      bay: bay,
+      status: String(row[3] || "").trim(),
+      counts: {
+        "Thrips": row[4] === "" ? "" : toNumber(row[4]),
+        "Aphids": row[5] === "" ? "" : toNumber(row[5]),
+        "Whiteflies": row[6] === "" ? "" : toNumber(row[6]),
+        "Fungus Gnats": row[7] === "" ? "" : toNumber(row[7])
+      },
+      lastScout: String(row[8] || "").trim(),
+      lastUpdated: row[9] || "",
+      notes: String(row[10] || "").trim()
+    };
+  }
+
+  const result = {
+    success: true,
+    week: currentWeek,
+    entries: entries
+  };
+
+  cache.put(
+    ENTRIES_CACHE_KEY,
+    JSON.stringify(result),
+    30
+  );
+
+  return result;
+}
+
+/* ==================================================
+   SINGLE BAY ENTRY
+================================================== */
+
+function getEntry(section, bay) {
+  const normalizedSection = normalizeSection(section);
+  const normalizedBay = String(bay || "").trim();
+  const currentWeek = getWeekNumber(new Date());
+
+  const data = getCurrentWeekData();
+
+  const result = {
+    success: true,
+    week: currentWeek,
+    section: normalizedSection,
+    bay: normalizedBay,
+    status: "",
+    counts: {
+      "Thrips": "",
+      "Aphids": "",
+      "Whiteflies": "",
+      "Fungus Gnats": ""
+    },
+    notes: "",
+    lastUpdated: "",
+    lastScout: ""
+  };
+
+  for (let i = 0; i < data.length; i++) {
+    const rowSection = normalizeSection(data[i][1]);
+    const rowBay = String(data[i][2] || "").trim();
+
+    if (
+      rowSection !== normalizedSection ||
+      rowBay !== normalizedBay
+    ) {
+      continue;
+    }
+
+    result.status = String(data[i][3] || "").trim();
+
+    result.counts = {
+      "Thrips": data[i][4] === "" ? "" : toNumber(data[i][4]),
+      "Aphids": data[i][5] === "" ? "" : toNumber(data[i][5]),
+      "Whiteflies": data[i][6] === "" ? "" : toNumber(data[i][6]),
+      "Fungus Gnats": data[i][7] === "" ? "" : toNumber(data[i][7])
+    };
+
+    result.lastScout = String(data[i][8] || "").trim();
+    result.lastUpdated = data[i][9] || "";
+    result.notes = String(data[i][10] || "").trim();
+
+    break;
+  }
+
+  return result;
+}
+
+/* ==================================================
+   ONE-REQUEST APP DATA
+
+   Reads Current_Week only once and returns everything
+   needed by Scout, Dashboard, Heat Maps and Reports.
+================================================== */
+
+function getAppData() {
+  const data = getCurrentWeekData();
+  const currentWeek = getWeekNumber(new Date());
+
+  const statusResult = getStatus(data);
+  const entriesResult = getCurrentWeekEntries(data);
+  const dashboardResult = getDashboard(data);
+  const heatMapsResult = getHeatMaps(data);
+
+  return {
+    success: true,
+    week: currentWeek,
+    records: statusResult.records || {},
+    entries: entriesResult.entries || {},
+    dashboard: dashboardResult,
+    heatMaps: heatMapsResult
+  };
+}
+
+/* ==================================================
+   DASHBOARD
+================================================== */
+
+function getDashboard(sharedData) {
+  const data = sharedData || getCurrentWeekData();
+  const currentWeek = getWeekNumber(new Date());
+
+  const sectionOrder = [
+    "S1", "S2", "S3", "S4", "S5",
+    "S6", "S7", "S8", "S9",
+    "S9A", "S9B", "S10A", "S10B"
+  ];
+
+  const bayMap = {
+    "S1": ["B1","B2","B3","B4","B5","B6"],
+    "S2": ["B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
+    "S3": ["B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
+    "S4": ["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","B11","B12","B13","B14","B15","B16"],
+    "S5": ["B4","B5","B6","B7","B8","B9","B10"],
+    "S6": ["B2","B3","B4","B5","B6","B7","B8","B9","B10"],
+    "S7": ["B2","B3","B4","B5","B6","B7","B8","B9","B10"],
+    "S8": ["B1","B2","B3","B4","B5","B6","B7","B8","B9"],
+    "S9": ["B1","B2","B3","B4","B5"],
+    "S9A": ["B6","B7","B8","B9","B10","B11","B12"],
+    "S9B": ["B6","B7","B8","B9","B10","B11","B12"],
+    "S10A": ["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"],
+    "S10B": ["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"]
+  };
+
+  const pests = [
+    "Thrips",
+    "Aphids",
+    "Whiteflies",
+    "Fungus Gnats"
+  ];
+
+  const sectionData = {};
+
+  sectionOrder.forEach(section => {
+    sectionData[section] = {
+      progress: 0,
+      completed: 0,
+      total: bayMap[section].length,
+      pests: {
+        "Thrips": 0,
+        "Aphids": 0,
+        "Whiteflies": 0,
+        "Fungus Gnats": 0
+      }
+    };
+  });
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+
+    const section = normalizeSection(row[1]);
+
+    if (!sectionData[section]) {
+      continue;
+    }
+
+    sectionData[section].completed++;
+
+    sectionData[section].pests["Thrips"] += toNumber(row[4]);
+    sectionData[section].pests["Aphids"] += toNumber(row[5]);
+    sectionData[section].pests["Whiteflies"] += toNumber(row[6]);
+    sectionData[section].pests["Fungus Gnats"] += toNumber(row[7]);
+  }
+
+  sectionOrder.forEach(section => {
+    const item = sectionData[section];
+
+    item.progress =
+      item.total > 0
+        ? Math.round(
+            (item.completed / item.total) * 100
+          )
+        : 0;
+  });
+
+  const hotspots = {};
+
+  pests.forEach(pest => {
+    let topSection = "";
+    let topValue = 0;
+
+    sectionOrder.forEach(section => {
+      const value = sectionData[section].pests[pest];
+
+      if (value > topValue) {
+        topValue = value;
+        topSection = section;
+      }
     });
 
-    const link = document.createElement("a");
-    link.download = fileName;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+    hotspots[pest] = {
+      section: topSection || "-",
+      value: topValue
+    };
+  });
 
-  } catch (error) {
-    console.error("PNG download failed:", error);
-    alert("The figure could not be downloaded. Please try again.");
-  } finally {
-    element.style.position = originalStyles.position;
-    element.style.left = originalStyles.left;
-    element.style.top = originalStyles.top;
-    element.style.zIndex = originalStyles.zIndex;
-    element.style.display = originalStyles.display;
-    element.style.visibility = originalStyles.visibility;
-    element.style.overflow = originalStyles.overflow;
-  }
-}
-
-function downloadGrowersReport() {
-  return downloadElementAsPng(
-    "growersReportExport",
-    "Growers_Weekly_Report.png",
-    "#ffffff"
+  const totalBays = sectionOrder.reduce(
+    (sum, section) =>
+      sum + bayMap[section].length,
+    0
   );
+
+  const completed = data.length;
+
+  const overallProgress =
+    totalBays > 0
+      ? Math.round(
+          (completed / totalBays) * 100
+        )
+      : 0;
+
+  return {
+    success: true,
+    week: currentWeek,
+    progress: overallProgress,
+    sectionData: sectionData,
+    hotspots: hotspots
+  };
 }
 
-function downloadHeatMap() {
-  return downloadElementAsPng(
-    "heatMapExport",
-    "IPM_Heat_Map.png",
-    "#ffffff"
-  );
-}
+/* ==================================================
+   HEAT MAPS
+================================================== */
 
-/* ---------- FOOTER NAV ---------- */
+function getHeatMaps(sharedData) {
+  const data = sharedData || getCurrentWeekData();
+  const currentWeek = getWeekNumber(new Date());
 
-function updateBottomBar(screen) {
-  const bar = document.getElementById("bottomBar");
-  const sectionsBtn = document.getElementById("bottomSectionsBtn");
-  const baysBtn = document.getElementById("bottomBaysBtn");
+  const sectionTotals = {};
+  const bayCounts = {};
 
-  if (screen === "sections") {
-    bar.classList.add("hidden");
-    return;
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+
+    const section = normalizeSection(row[1]);
+    const bay = String(row[2] || "").trim();
+    const status = String(row[3] || "").trim();
+
+    if (
+      !section ||
+      !bay ||
+      status !== "Scouted"
+    ) {
+      continue;
+    }
+
+    if (!sectionTotals[section]) {
+      sectionTotals[section] = {
+        "Fungus Gnats": 0
+      };
+    }
+
+    if (!bayCounts[section]) {
+      bayCounts[section] = {};
+    }
+
+    bayCounts[section][bay] = {
+      "Thrips": toNumber(row[4]),
+      "Aphids": toNumber(row[5]),
+      "Whiteflies": toNumber(row[6])
+    };
+
+    sectionTotals[section]["Fungus Gnats"] +=
+      toNumber(row[7]);
   }
 
-  bar.classList.remove("hidden");
-
-  sectionsBtn.style.display = screen === "bays" ? "block" : "none";
-  baysBtn.style.display = screen === "entry" ? "block" : "none";
+  return {
+    success: true,
+    week: currentWeek,
+    fungusGnatsBySection: sectionTotals,
+    bayCounts: bayCounts
+  };
 }
-
-function goToSections() {
-  renderSections();
-}
-
-function goToBays() {
-  if (selectedSection) {
-    showBays(selectedSection);
-  }
-}
-</script>
-
-</body>
-</html>
