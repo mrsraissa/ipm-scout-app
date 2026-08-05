@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=206">
+  <link rel="stylesheet" href="css/style.css?v=207">
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
@@ -57,7 +57,7 @@
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbw0gvDgTKFNaGw8YnTJR3g9fT4wF03iiXNWSQnQFOwThWCt1ZME4_DOvo4F0e8D2KD6/exec";
 
-console.log("IPM Scout build 206 loaded");
+console.log("IPM Scout build 207 loaded");
 
 const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
 
@@ -108,20 +108,26 @@ function initializeApp() {
   }
 
   /*
-   * Load the current week and bay colors first.
-   * Then load all saved current-week entries for instant editing.
+   * Load status first so the week and bay colors appear as soon as possible.
+   * Load saved entry details shortly afterward.
    */
   setTimeout(() => {
     loadStatus();
-    loadCurrentWeekEntries(true);
   }, 50);
 
+  setTimeout(() => {
+    loadCurrentWeekEntries(true);
+  }, 1500);
+
   /*
-   * Keep both scouts synchronized in the background.
+   * Keep both scouts synchronized without sending both requests together.
    */
   setInterval(() => {
     loadStatus();
-    loadCurrentWeekEntries(true);
+
+    setTimeout(() => {
+      loadCurrentWeekEntries(true);
+    }, 1500);
   }, 30000);
 }
 
@@ -135,30 +141,70 @@ function loadStatus() {
     Math.random().toString(36).slice(2);
 
   const script = document.createElement("script");
+  let finished = false;
 
+  /*
+   * Apps Script can occasionally take longer to start.
+   * Keep the callback alive long enough for a cold start.
+   */
   const timeout = setTimeout(() => {
-    cleanup();
-    console.warn("Status request timed out. The current screen remains available.");
-  }, 8000);
+    if (finished) return;
 
-  function cleanup() {
+    console.warn(
+      "Status request is taking longer than expected. Waiting for Apps Script..."
+    );
+  }, 12000);
+
+  const finalTimeout = setTimeout(() => {
+    if (finished) return;
+
+    finished = true;
+    cleanupScript();
+
+    /*
+     * Leave a harmless callback behind briefly so that a very late
+     * JSONP response does not produce "callback is not defined".
+     */
+    window[callbackName] = function() {};
+
+    setTimeout(() => {
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = undefined;
+      }
+    }, 60000);
+
+    console.warn(
+      "Could not retrieve shared bay status after 45 seconds."
+    );
+  }, 45000);
+
+  function cleanupScript() {
     clearTimeout(timeout);
+    clearTimeout(finalTimeout);
 
     if (script.parentNode) {
       script.parentNode.removeChild(script);
     }
+  }
+
+  window[callbackName] = function(data) {
+    if (finished) return;
+
+    finished = true;
+    cleanupScript();
 
     try {
       delete window[callbackName];
     } catch (error) {
       window[callbackName] = undefined;
     }
-  }
 
-  window[callbackName] = function(data) {
-    cleanup();
-
-    if (!data || !data.success) return;
+    if (!data || !data.success) {
+      console.warn("Invalid status response:", data);
+      return;
+    }
 
     weekStatus = data.records || {};
     currentWeek = data.week || "";
@@ -167,13 +213,23 @@ function loadStatus() {
       currentWeek ? "Week " + currentWeek : "";
 
     if (selectedSection && !selectedBay) {
-      showBays(selectedSection);
+      renderBayScreen(selectedSection);
     }
   };
 
   script.onerror = function() {
-    cleanup();
-    console.warn("Could not retrieve shared bay status.");
+    if (finished) return;
+
+    finished = true;
+    cleanupScript();
+
+    try {
+      delete window[callbackName];
+    } catch (error) {
+      window[callbackName] = undefined;
+    }
+
+    console.warn("Could not connect to Apps Script for status.");
   };
 
   script.src =
@@ -184,7 +240,7 @@ function loadStatus() {
 
   document.body.appendChild(script);
 }
-function requestJsonp(action, params = {}, timeoutMs = 12000) {
+function requestJsonp(action, params = {}, timeoutMs = 45000) {
   return new Promise((resolve, reject) => {
     const callbackName =
       action.replace(/[^a-zA-Z0-9]/g, "") +
@@ -194,33 +250,74 @@ function requestJsonp(action, params = {}, timeoutMs = 12000) {
       Math.random().toString(36).slice(2);
 
     const script = document.createElement("script");
+    let finished = false;
 
-    const timeout = setTimeout(() => {
-      cleanup();
+    const warningTimeout = setTimeout(() => {
+      if (finished) return;
+
+      console.warn(
+        action + " is taking longer than expected. Waiting for Apps Script..."
+      );
+    }, 12000);
+
+    const finalTimeout = setTimeout(() => {
+      if (finished) return;
+
+      finished = true;
+      cleanupScript();
+
+      /*
+       * Prevent a late JSONP response from throwing a ReferenceError.
+       */
+      window[callbackName] = function() {};
+
+      setTimeout(() => {
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = undefined;
+        }
+      }, 60000);
+
       reject(new Error(action + " request timed out."));
     }, timeoutMs);
 
-    function cleanup() {
-      clearTimeout(timeout);
+    function cleanupScript() {
+      clearTimeout(warningTimeout);
+      clearTimeout(finalTimeout);
 
       if (script.parentNode) {
         script.parentNode.removeChild(script);
       }
+    }
+
+    window[callbackName] = function(data) {
+      if (finished) return;
+
+      finished = true;
+      cleanupScript();
 
       try {
         delete window[callbackName];
       } catch (error) {
         window[callbackName] = undefined;
       }
-    }
 
-    window[callbackName] = function(data) {
-      cleanup();
       resolve(data);
     };
 
     script.onerror = function() {
-      cleanup();
+      if (finished) return;
+
+      finished = true;
+      cleanupScript();
+
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = undefined;
+      }
+
       reject(new Error("Could not connect to Apps Script."));
     };
 
@@ -253,7 +350,7 @@ async function loadCurrentWeekEntries(force = false) {
     const data = await requestJsonp(
       "getCurrentWeekEntries",
       {},
-      12000
+      45000
     );
 
     if (
@@ -315,7 +412,7 @@ async function loadDashboard() {
   `;
 
   try {
-    const data = await requestJsonp("getDashboard", {}, 15000);
+    const data = await requestJsonp("getDashboard", {}, 45000);
     renderDashboard(data);
   } catch (error) {
     console.error("Dashboard load failed:", error);
@@ -342,7 +439,7 @@ async function loadHeatMaps() {
   `;
 
   try {
-    const data = await requestJsonp("getHeatMaps", {}, 15000);
+    const data = await requestJsonp("getHeatMaps", {}, 45000);
     renderHeatMaps(data);
   } catch (error) {
     console.error("Heat map load failed:", error);
@@ -1339,7 +1436,7 @@ function renderReportsPage() {
   `;
 
   try {
-    const data = await requestJsonp("getHeatMaps", {}, 15000);
+    const data = await requestJsonp("getHeatMaps", {}, 45000);
     renderGrowersReport(data);
   } catch (error) {
     console.error("Growers report load failed:", error);
