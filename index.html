@@ -109,19 +109,21 @@ function initializeApp() {
    * Load the current week and bay colors first.
    * Then load all saved current-week entries for instant editing.
    */
-  setTimeout(() => {
-    loadStatus();
+  setTimeout(async () => {
+    await loadStatus();
     loadCurrentWeekEntries(true);
-  }, 50);
+}, 50);
 
   /*
    * Keep both scouts synchronized in the background.
    */
   setInterval(() => {
     loadStatus();
-    loadCurrentWeekEntries(true);
-  }, 30000);
-}
+
+    if (!entriesAreLoading) {
+        loadCurrentWeekEntries(true);
+    }
+}, 30000);
 
 /* ---------- LOAD DATA ---------- */
 
