@@ -92,9 +92,14 @@ if (document.readyState === "loading") {
 
 function initializeApp() {
   loadCachedStatus();
+
+  // Display the section buttons first.
   renderSections();
 
-  // loadStatus();
+  // Start the Google request after the page is visible.
+  setTimeout(() => {
+    loadStatus();
+  }, 100);
 }
 
 /* --------------------------------------------------
