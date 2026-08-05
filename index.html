@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=202">
+  <link rel="stylesheet" href="css/style.css?v=203">
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
@@ -105,13 +105,15 @@ function initializeApp() {
     selectScout();
   }
 
-  /*
-   * Show the page first, then load shared data in the background.
-   */
+  // One request supplies week, bay status, counts, notes and scout information.
   setTimeout(() => {
-    loadStatus();
-    loadCurrentWeekEntries();
+    loadCurrentWeekEntries(true);
   }, 50);
+
+  // Refresh data from other scouts every 30 seconds.
+  setInterval(() => {
+    loadCurrentWeekEntries(true);
+  }, 30000);
 }
 
 /* ---------- LOAD DATA ---------- */
@@ -156,7 +158,7 @@ function loadStatus() {
       currentWeek ? "Week " + currentWeek : "";
 
     if (selectedSection && !selectedBay) {
-      showBays(selectedSection, false);
+      showBays(selectedSection);
     }
   };
 
@@ -173,7 +175,6 @@ function loadStatus() {
 
   document.body.appendChild(script);
 }
-
 function requestJsonp(action, params = {}, timeoutMs = 12000) {
   return new Promise((resolve, reject) => {
     const callbackName =
@@ -240,25 +241,51 @@ async function loadCurrentWeekEntries(force = false) {
   entriesAreLoading = true;
 
   try {
-    const data = await requestJsonp("getCurrentWeekEntries", {}, 12000);
+    const data = await requestJsonp(
+      "getCurrentWeekEntries",
+      {},
+      12000
+    );
 
-    if (data && data.success) {
-      currentWeekEntries = data.entries || {};
-      entriesAreLoaded = true;
-
-      if (data.week) {
-        currentWeek = data.week;
-        document.getElementById("weekDisplay").innerHTML =
-          "Week " + currentWeek;
-      }
-
-      return true;
+    if (!data || !data.success) {
+      return false;
     }
 
-    return false;
+    currentWeekEntries = data.entries || {};
+    entriesAreLoaded = true;
+
+    /*
+     * Build all bay colors from this same response.
+     * This removes the need for a separate getStatus request.
+     */
+    weekStatus = {};
+
+    Object.keys(currentWeekEntries).forEach(key => {
+      weekStatus[key] =
+        currentWeekEntries[key].status;
+    });
+
+    currentWeek = data.week || "";
+
+    document.getElementById("weekDisplay").innerHTML =
+      currentWeek
+        ? "Week " + currentWeek
+        : "";
+
+    if (selectedSection && !selectedBay) {
+      renderBayScreen(selectedSection);
+    }
+
+    return true;
+
   } catch (error) {
-    console.warn("Could not load current-week entries:", error);
+    console.warn(
+      "Could not load current-week entries:",
+      error
+    );
+
     return false;
+
   } finally {
     entriesAreLoading = false;
   }
@@ -440,11 +467,23 @@ function renderSections() {
   document.getElementById("sectionContainer").innerHTML = html;
 }
 
-function showBays(section, refreshSharedStatus = true) {
-  const progress = getSectionPercent(section);
-
+function showBays(section) {
   selectedSection = section;
   selectedBay = "";
+
+  /*
+   * Open immediately using the data already loaded in memory.
+   */
+  renderBayScreen(section);
+}
+
+function renderBayScreen(section) {
+  if (!bayMap[section]) {
+    console.error("Section not found:", section);
+    return;
+  }
+
+  const progress = getSectionPercent(section);
 
   updateBottomBar("bays");
   showScoutNameOnly();
@@ -454,25 +493,31 @@ function showBays(section, refreshSharedStatus = true) {
 
   let html = `
     <h2>${section} - Select Bay</h2>
-    <div class="section-percent">Progress: ${progress}%</div>
+
+    <div class="section-percent">
+      Progress: ${progress}%
+    </div>
+
     <div class="grid bay-grid">
   `;
 
   bayMap[section].forEach(bay => {
-    const statusClass = getBayStatus(section, bay);
+    const statusClass =
+      getBayStatus(section, bay);
+
     html += `
-      <button class="btn ${statusClass}" onclick="handleBayClick('${bay}')">
+      <button
+        class="btn ${statusClass}"
+        onclick="handleBayClick('${bay}')"
+      >
         ${bay}
       </button>
     `;
   });
 
   html += `</div>`;
-  document.getElementById("bayContainer").innerHTML = html;
 
-  if (refreshSharedStatus) {
-    setTimeout(loadStatus, 50);
-  }
+  document.getElementById("bayContainer").innerHTML = html;
 }
 
 function getSectionPercent(section) {
@@ -753,11 +798,10 @@ function saveCounts() {
 
     setTimeout(() => {
       selectedBay = "";
-      showBays(sectionAtSave, false);
+      showBays(sectionAtSave);
     }, 250);
 
     setTimeout(() => {
-      loadStatus();
       loadCurrentWeekEntries(true);
     }, 1800);
   } catch (error) {
@@ -810,11 +854,10 @@ function saveEmptyBay() {
 
     setTimeout(() => {
       selectedBay = "";
-      showBays(sectionAtSave, false);
+      showBays(sectionAtSave);
     }, 250);
 
     setTimeout(() => {
-      loadStatus();
       loadCurrentWeekEntries(true);
     }, 1800);
   } catch (error) {
