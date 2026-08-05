@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=215">
+  <link rel="stylesheet" href="css/style.css?v=216">
   <script
   src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
   onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';">
@@ -60,7 +60,7 @@
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbw0gvDgTKFNaGw8YnTJR3g9fT4wF03iiXNWSQnQFOwThWCt1ZME4_DOvo4F0e8D2KD6/exec";
 
-console.log("IPM Scout build 215 loaded");
+console.log("IPM Scout build 216 loaded");
 
 const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
 
@@ -698,7 +698,7 @@ function showEntry(bay, entryData = null) {
   document.getElementById("entryContainer").innerHTML = html;
 }
 
-async function sendToSheet(params, timeoutMs = 20000) {
+async function sendToSheet(params, timeoutMs = 12000) {
   if (!navigator.onLine) {
     throw new Error(
       "No internet connection. Please reconnect and try again."
