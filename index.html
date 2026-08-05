@@ -562,9 +562,7 @@ async function handleBayClick(bay) {
   }
 
   const answer = confirm(
-    "This bay was already entered this week.
-
-Do you want to modify it?"
+    "This bay was already entered this week.\n\nDo you want to modify it?"
   );
 
   if (!answer) return;
@@ -1565,12 +1563,6 @@ function downloadHeatMap() {
     "IPM_Heat_Map.png",
     "#ffffff"
   );
-}).then(canvas => {
-    const link = document.createElement("a");
-    link.download = "IPM_Heat_Map.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  });
 }
 
 /* ---------- FOOTER NAV ---------- */
