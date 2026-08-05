@@ -84,14 +84,17 @@ let isStatusRefreshing = false;
    INITIAL LOAD
 -------------------------------------------------- */
 
-initializeApp();
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeApp);
+} else {
+  initializeApp();
+}
 
 function initializeApp() {
   loadCachedStatus();
   renderSections();
 
-  // Refresh shared information without delaying the first screen.
-  loadStatus();
+  // loadStatus();
 }
 
 /* --------------------------------------------------
