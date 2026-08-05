@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=211">
+  <link rel="stylesheet" href="css/style.css?v=215">
   <script
   src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
   onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';">
@@ -60,7 +60,7 @@
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbw0gvDgTKFNaGw8YnTJR3g9fT4wF03iiXNWSQnQFOwThWCt1ZME4_DOvo4F0e8D2KD6/exec";
 
-console.log("IPM Scout build 211 loaded");
+console.log("IPM Scout build 215 loaded");
 
 const pests = ["Thrips", "Aphids", "Whiteflies", "Fungus Gnats"];
 
@@ -687,8 +687,8 @@ function showEntry(bay, entryData = null) {
     <label><strong>Notes</strong></label>
     <textarea id="notes" placeholder="Crop, location, treatment, beneficials...">${savedNotes}</textarea>
 
-    <button class="save-btn" onclick="saveCounts()">Save Counts</button>
-    <button class="empty-btn" onclick="saveEmptyBay()">No Plants</button>
+    <button id="saveCountsButton" class="save-btn" onclick="saveCounts()">Save Counts</button>
+    <button id="saveEmptyButton" class="empty-btn" onclick="saveEmptyBay()">No Plants</button>
 
     ${lastUpdated ? `<div class="last-updated">Last updated: ${lastScout ? lastScout + " - " : ""}${lastUpdated}</div>` : ""}
 
@@ -698,29 +698,56 @@ function showEntry(bay, entryData = null) {
   document.getElementById("entryContainer").innerHTML = html;
 }
 
-function sendToSheet(params) {
-  const formData = new URLSearchParams();
+async function sendToSheet(params, timeoutMs = 20000) {
+  if (!navigator.onLine) {
+    throw new Error(
+      "No internet connection. Please reconnect and try again."
+    );
+  }
 
-  Object.keys(params).forEach(key => {
-    formData.append(key, params[key]);
-  });
+  const result = await requestApi(
+    "saveEntry",
+    params,
+    timeoutMs
+  );
 
-  return fetch(API_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: formData.toString()
-  });
+  if (!result || result.success !== true) {
+    throw new Error(
+      result && result.message
+        ? result.message
+        : "Google Sheets did not confirm the save."
+    );
+  }
+
+  return result;
 }
 
-function saveCounts() {
+function setSavingState(isSaving) {
+  const saveCountsButton =
+    document.getElementById("saveCountsButton");
+
+  const saveEmptyButton =
+    document.getElementById("saveEmptyButton");
+
+  if (saveCountsButton) {
+    saveCountsButton.disabled = isSaving;
+  }
+
+  if (saveEmptyButton) {
+    saveEmptyButton.disabled = isSaving;
+  }
+}
+
+
+
+async function saveCounts() {
   const values = {};
 
-  document.querySelectorAll("#entryContainer input").forEach(input => {
-    values[input.dataset.pest] = input.value;
-  });
+  document
+    .querySelectorAll("#entryContainer input")
+    .forEach(input => {
+      values[input.dataset.pest] = input.value;
+    });
 
   const sectionAtSave = selectedSection;
   const bayAtSave = selectedBay;
@@ -730,19 +757,27 @@ function saveCounts() {
 
   if (!message) return;
 
-  message.innerHTML = "Sending...";
+  const submittedCounts = {
+    "Thrips": Number(values["Thrips"] || 0),
+    "Aphids": Number(values["Aphids"] || 0),
+    "Whiteflies": Number(values["Whiteflies"] || 0),
+    "Fungus Gnats": Number(values["Fungus Gnats"] || 0)
+  };
+
+  message.textContent = "Saving...";
   message.className = "message";
+  setSavingState(true);
 
   try {
-    sendToSheet({
+    const result = await sendToSheet({
       scout: currentScout,
       section: sectionAtSave,
       bay: bayAtSave,
       status: "Scouted",
-      thrips: values["Thrips"] || 0,
-      aphids: values["Aphids"] || 0,
-      whiteflies: values["Whiteflies"] || 0,
-      fungusGnats: values["Fungus Gnats"] || 0,
+      thrips: submittedCounts["Thrips"],
+      aphids: submittedCounts["Aphids"],
+      whiteflies: submittedCounts["Whiteflies"],
+      fungusGnats: submittedCounts["Fungus Gnats"],
       notes: notes ? notes.value : ""
     });
 
@@ -752,36 +787,42 @@ function saveCounts() {
       section: sectionAtSave,
       bay: bayAtSave,
       status: "Scouted",
-      counts: {
-        "Thrips": Number(values["Thrips"] || 0),
-        "Aphids": Number(values["Aphids"] || 0),
-        "Whiteflies": Number(values["Whiteflies"] || 0),
-        "Fungus Gnats": Number(values["Fungus Gnats"] || 0)
-      },
+      counts: submittedCounts,
       notes: notes ? notes.value : "",
-      lastUpdated: new Date().toISOString(),
+      lastUpdated:
+        result.timestamp || new Date().toISOString(),
       lastScout: currentScout
     };
 
-    message.innerHTML = "✓ Submitted";
+    appDataCache = null;
+    appDataLoadedAt = 0;
+
+    message.textContent = "✓ Saved successfully";
     message.className = "message success-message";
 
     setTimeout(() => {
       selectedBay = "";
       showBays(sectionAtSave);
-    }, 250);
+    }, 500);
 
     setTimeout(() => {
       loadAppData(true);
-    }, 1800);
+    }, 900);
+
   } catch (error) {
     console.error("Submission failed:", error);
-    message.innerHTML = "Submission failed. Please check your connection.";
+
+    message.textContent =
+      "❌ " +
+      error.message +
+      " Your entry was not cleared.";
+
     message.className = "message error-message";
+    setSavingState(false);
   }
 }
 
-function saveEmptyBay() {
+async function saveEmptyBay() {
   const sectionAtSave = selectedSection;
   const bayAtSave = selectedBay;
   const key = sectionAtSave + "|" + bayAtSave;
@@ -790,16 +831,22 @@ function saveEmptyBay() {
 
   if (!message) return;
 
-  message.innerHTML = "Sending...";
+  const savedNotes =
+    notes && notes.value
+      ? notes.value
+      : "No plants";
+
+  message.textContent = "Saving...";
   message.className = "message";
+  setSavingState(true);
 
   try {
-    sendToSheet({
+    const result = await sendToSheet({
       scout: currentScout,
       section: sectionAtSave,
       bay: bayAtSave,
       status: "Empty",
-      notes: notes && notes.value ? notes.value : "No plants"
+      notes: savedNotes
     });
 
     weekStatus[key] = "Empty";
@@ -814,28 +861,56 @@ function saveEmptyBay() {
         "Whiteflies": "",
         "Fungus Gnats": ""
       },
-      notes: notes && notes.value ? notes.value : "No plants",
-      lastUpdated: new Date().toISOString(),
+      notes: savedNotes,
+      lastUpdated:
+        result.timestamp || new Date().toISOString(),
       lastScout: currentScout
     };
 
-    message.innerHTML = "✓ Empty bay submitted";
+    appDataCache = null;
+    appDataLoadedAt = 0;
+
+    message.textContent = "✓ Empty bay saved";
     message.className = "message success-message";
 
     setTimeout(() => {
       selectedBay = "";
       showBays(sectionAtSave);
-    }, 250);
+    }, 500);
 
     setTimeout(() => {
       loadAppData(true);
-    }, 1800);
+    }, 900);
+
   } catch (error) {
-    console.error("Empty bay submission failed:", error);
-    message.innerHTML = "Submission failed. Please check your connection.";
+    console.error(
+      "Empty-bay submission failed:",
+      error
+    );
+
+    message.textContent =
+      "❌ " +
+      error.message +
+      " Your entry was not cleared.";
+
     message.className = "message error-message";
+    setSavingState(false);
   }
 }
+
+
+window.addEventListener("offline", () => {
+  const message = document.getElementById("message");
+
+  if (message) {
+    message.textContent =
+      "❌ No internet connection. Please reconnect and try again. " +
+      "Your entry was not cleared.";
+
+    message.className = "message error-message";
+    setSavingState(false);
+  }
+});
 
 /* ---------- DASHBOARD ---------- */
 
