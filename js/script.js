@@ -29,7 +29,10 @@ const bayMap = {
     "B11", "B12", "B13", "B14", "B15", "B16"
   ],
 
-  S5: ["B4", "B5", "B6", "B7", "B8", "B9", "B10"],
+  S5: [
+    "B4", "B5", "B6", "B7",
+    "B8", "B9", "B10"
+  ],
 
   S6: [
     "B2", "B3", "B4", "B5", "B6",
@@ -46,7 +49,9 @@ const bayMap = {
     "B6", "B7", "B8", "B9"
   ],
 
-  S9: ["B1", "B2", "B3", "B4", "B5"],
+  S9: [
+    "B1", "B2", "B3", "B4", "B5"
+  ],
 
   S9A: [
     "B6", "B7", "B8", "B9",
@@ -93,10 +98,10 @@ if (document.readyState === "loading") {
 function initializeApp() {
   loadCachedStatus();
 
-  // Display the section buttons first.
+  // Show the section screen immediately.
   renderSections();
 
-  // Start the Google request after the page is visible.
+  // Refresh shared status shortly after the page appears.
   setTimeout(() => {
     loadStatus();
   }, 100);
@@ -107,7 +112,8 @@ function initializeApp() {
 -------------------------------------------------- */
 
 function loadCachedStatus() {
-  const savedStatus = localStorage.getItem("ipmWeekStatus");
+  const savedStatus =
+    localStorage.getItem("ipmWeekStatus");
 
   if (!savedStatus) {
     weekStatus = {};
@@ -115,19 +121,31 @@ function loadCachedStatus() {
   }
 
   try {
-    weekStatus = JSON.parse(savedStatus) || {};
+    weekStatus =
+      JSON.parse(savedStatus) || {};
   } catch (error) {
-    console.warn("Could not read cached status:", error);
+    console.warn(
+      "Could not read cached status:",
+      error
+    );
+
     weekStatus = {};
     localStorage.removeItem("ipmWeekStatus");
   }
 }
 
 function saveStatusCache() {
-  localStorage.setItem(
-    "ipmWeekStatus",
-    JSON.stringify(weekStatus)
-  );
+  try {
+    localStorage.setItem(
+      "ipmWeekStatus",
+      JSON.stringify(weekStatus)
+    );
+  } catch (error) {
+    console.warn(
+      "Could not save cached status:",
+      error
+    );
+  }
 }
 
 /* --------------------------------------------------
@@ -142,12 +160,18 @@ function jsonp(action, params = {}) {
       "_" +
       Math.random().toString(36).slice(2);
 
-    const script = document.createElement("script");
+    const script =
+      document.createElement("script");
 
     const timeout = setTimeout(() => {
       cleanup();
-      reject(new Error("Apps Script request timed out"));
-    }, 15000);
+
+      reject(
+        new Error(
+          "Apps Script request timed out"
+        )
+      );
+    }, 8000);
 
     function cleanup() {
       clearTimeout(timeout);
@@ -178,11 +202,17 @@ function jsonp(action, params = {}) {
       query.append(key, params[key]);
     });
 
-    script.src = API_URL + "?" + query.toString();
+    script.src =
+      API_URL + "?" + query.toString();
 
     script.onerror = function() {
       cleanup();
-      reject(new Error("Apps Script connection failed"));
+
+      reject(
+        new Error(
+          "Apps Script connection failed"
+        )
+      );
     };
 
     document.body.appendChild(script);
@@ -196,19 +226,23 @@ function postToGoogle(params) {
     formData.append(key, params[key]);
   });
 
-  return fetch(API_URL, {
+  /*
+   * Send the request without making the interface wait
+   * for the complete Apps Script response.
+   */
+  fetch(API_URL, {
     method: "POST",
     mode: "no-cors",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
+      "Content-Type":
+        "application/x-www-form-urlencoded"
     },
     body: formData.toString()
-  });
-}
-
-function wait(milliseconds) {
-  return new Promise(resolve => {
-    setTimeout(resolve, milliseconds);
+  }).catch(error => {
+    console.error(
+      "Background submission failed:",
+      error
+    );
   });
 }
 
@@ -218,27 +252,36 @@ function wait(milliseconds) {
 
 async function loadStatus() {
   if (isStatusRefreshing) {
-    return;
+    return false;
   }
 
   isStatusRefreshing = true;
 
   try {
-    const result = await jsonp("getStatus");
+    const result =
+      await jsonp("getStatus");
 
     if (result && result.success) {
-      weekStatus = result.records || {};
+      weekStatus =
+        result.records || {};
+
       saveStatusCache();
       refreshCurrentScreen();
+
+      return true;
     }
+
+    return false;
   } catch (error) {
     console.warn(
       "Could not load the latest shared bay status:",
       error
     );
 
-    // Cached data remains visible if Google is slow or offline.
+    // Continue showing cached data.
     refreshCurrentScreen();
+
+    return false;
   } finally {
     isStatusRefreshing = false;
   }
@@ -246,30 +289,42 @@ async function loadStatus() {
 
 async function refreshStatusSilently() {
   if (isStatusRefreshing) {
-    return;
+    return false;
   }
 
   isStatusRefreshing = true;
 
   try {
-    const result = await jsonp("getStatus");
+    const result =
+      await jsonp("getStatus");
 
     if (result && result.success) {
-      weekStatus = result.records || {};
+      weekStatus =
+        result.records || {};
+
       saveStatusCache();
+
+      return true;
     }
+
+    return false;
   } catch (error) {
     console.warn(
       "Could not refresh shared bay status:",
       error
     );
+
+    return false;
   } finally {
     isStatusRefreshing = false;
   }
 }
 
 function refreshCurrentScreen() {
-  if (selectedSection && !selectedBay) {
+  if (
+    selectedSection &&
+    !selectedBay
+  ) {
     renderBayButtons(selectedSection);
   }
 }
@@ -282,13 +337,23 @@ function renderSections() {
   selectedSection = "";
   selectedBay = "";
 
-  const userName = document.getElementById("userName");
+  const userName =
+    document.getElementById("userName");
+
   const sectionContainer =
-    document.getElementById("sectionContainer");
+    document.getElementById(
+      "sectionContainer"
+    );
+
   const bayContainer =
-    document.getElementById("bayContainer");
+    document.getElementById(
+      "bayContainer"
+    );
+
   const entryContainer =
-    document.getElementById("entryContainer");
+    document.getElementById(
+      "entryContainer"
+    );
 
   if (userName) {
     userName.innerHTML = "Scout Entry";
@@ -300,6 +365,13 @@ function renderSections() {
 
   if (entryContainer) {
     entryContainer.innerHTML = "";
+  }
+
+  if (!sectionContainer) {
+    console.error(
+      "sectionContainer was not found."
+    );
+    return;
   }
 
   let html = `
@@ -332,12 +404,13 @@ function showBays(section) {
   selectedSection = section;
   selectedBay = "";
 
-  // Display cached status immediately.
+  // Show cached colors immediately.
   renderBayButtons(section);
 
-  // Then retrieve the latest status entered by other users.
-  refreshStatusSilently().then(() => {
+  // Refresh shared data in the background.
+  refreshStatusSilently().then(updated => {
     if (
+      updated &&
       selectedSection === section &&
       selectedBay === ""
     ) {
@@ -348,16 +421,38 @@ function showBays(section) {
 
 function renderBayButtons(section) {
   if (!bayMap[section]) {
-    console.error("Section not found:", section);
+    console.error(
+      "Section not found:",
+      section
+    );
     return;
   }
 
   const sectionContainer =
-    document.getElementById("sectionContainer");
+    document.getElementById(
+      "sectionContainer"
+    );
+
   const bayContainer =
-    document.getElementById("bayContainer");
+    document.getElementById(
+      "bayContainer"
+    );
+
   const entryContainer =
-    document.getElementById("entryContainer");
+    document.getElementById(
+      "entryContainer"
+    );
+
+  if (
+    !sectionContainer ||
+    !bayContainer ||
+    !entryContainer
+  ) {
+    console.error(
+      "One or more screen containers were not found."
+    );
+    return;
+  }
 
   sectionContainer.innerHTML = "";
   entryContainer.innerHTML = "";
@@ -376,7 +471,8 @@ function renderBayButtons(section) {
   `;
 
   bayMap[section].forEach(bay => {
-    const statusClass = getBayStatus(section, bay);
+    const statusClass =
+      getBayStatus(section, bay);
 
     html += `
       <button
@@ -412,22 +508,26 @@ function getBayStatus(section, bay) {
    OPEN / MODIFY BAY
 -------------------------------------------------- */
 
-async function handleBayClick(bay) {
-  // Check the server again before opening the bay.
-  // This reduces the chance that two people enter the same bay.
-  await refreshStatusSilently();
+function handleBayClick(bay) {
+  /*
+   * Do not call Apps Script again here.
+   * The status was already refreshed when the section opened.
+   */
+  const key =
+    selectedSection + "|" + bay;
 
-  const key = selectedSection + "|" + bay;
   const status = weekStatus[key];
 
-  if (status === "Scouted" || status === "Empty") {
+  if (
+    status === "Scouted" ||
+    status === "Empty"
+  ) {
     const shouldModify = confirm(
       "This bay was already entered this week.\n\n" +
       "Do you want to modify it?"
     );
 
     if (!shouldModify) {
-      renderBayButtons(selectedSection);
       return;
     }
   }
@@ -443,9 +543,21 @@ function showEntry(bay) {
   selectedBay = bay;
 
   const bayContainer =
-    document.getElementById("bayContainer");
+    document.getElementById(
+      "bayContainer"
+    );
+
   const entryContainer =
-    document.getElementById("entryContainer");
+    document.getElementById(
+      "entryContainer"
+    );
+
+  if (!bayContainer || !entryContainer) {
+    console.error(
+      "Entry screen containers were not found."
+    );
+    return;
+  }
 
   bayContainer.innerHTML = "";
 
@@ -457,7 +569,9 @@ function showEntry(bay) {
       ← Bays
     </button>
 
-    <h2>${selectedSection} - ${selectedBay}</h2>
+    <h2>
+      ${selectedSection} - ${selectedBay}
+    </h2>
 
     <div class="compact-entry">
   `;
@@ -505,7 +619,10 @@ function showEntry(bay) {
       Empty Bay / No Plants
     </button>
 
-    <div id="message" class="message"></div>
+    <div
+      id="message"
+      class="message"
+    ></div>
   `;
 
   entryContainer.innerHTML = html;
@@ -513,9 +630,14 @@ function showEntry(bay) {
 
 function setSavingState(isSaving) {
   const saveCountsButton =
-    document.getElementById("saveCountsButton");
+    document.getElementById(
+      "saveCountsButton"
+    );
+
   const saveEmptyButton =
-    document.getElementById("saveEmptyButton");
+    document.getElementById(
+      "saveEmptyButton"
+    );
 
   if (saveCountsButton) {
     saveCountsButton.disabled = isSaving;
@@ -530,55 +652,96 @@ function setSavingState(isSaving) {
    SAVE COUNTS
 -------------------------------------------------- */
 
-async function saveCounts() {
+function saveCounts() {
   const inputs =
-    document.querySelectorAll("#entryContainer input");
+    document.querySelectorAll(
+      "#entryContainer input"
+    );
 
   const values = {};
 
   inputs.forEach(input => {
-    values[input.dataset.pest] = input.value;
+    values[input.dataset.pest] =
+      input.value;
   });
 
-  const sectionAtSave = selectedSection;
-  const bayAtSave = selectedBay;
-  const key = sectionAtSave + "|" + bayAtSave;
+  const sectionAtSave =
+    selectedSection;
 
-  const message = document.getElementById("message");
+  const bayAtSave =
+    selectedBay;
 
-  message.innerHTML = "Saving...";
+  const key =
+    sectionAtSave + "|" + bayAtSave;
+
+  const message =
+    document.getElementById("message");
+
+  const notes =
+    document.getElementById("notes");
+
+  if (!message) {
+    return;
+  }
+
+  message.innerHTML = "Sending...";
   setSavingState(true);
 
   try {
-    await postToGoogle({
+    postToGoogle({
       scout: "Raissa",
       section: sectionAtSave,
       bay: bayAtSave,
       status: "Scouted",
-      thrips: values["Thrips"] || 0,
-      aphids: values["Aphids"] || 0,
-      whiteflies: values["Whiteflies"] || 0,
-      fungusGnats: values["Fungus Gnats"] || 0,
-      notes: document.getElementById("notes").value
+      thrips:
+        values["Thrips"] || 0,
+      aphids:
+        values["Aphids"] || 0,
+      whiteflies:
+        values["Whiteflies"] || 0,
+      fungusGnats:
+        values["Fungus Gnats"] || 0,
+      notes:
+        notes ? notes.value : ""
     });
 
-    // Update the local screen immediately.
+    /*
+     * Update the local screen immediately.
+     * The browser does not wait for Apps Script.
+     */
     weekStatus[key] = "Scouted";
     saveStatusCache();
 
-    message.innerHTML = "Saved";
+    message.innerHTML = "Submitted";
 
-    // Give Apps Script time to finish writing, then refresh.
-    await wait(700);
-    await refreshStatusSilently();
+    setTimeout(() => {
+      selectedBay = "";
+      renderBayButtons(sectionAtSave);
+    }, 250);
 
-    selectedBay = "";
-    renderBayButtons(sectionAtSave);
+    /*
+     * Confirm the shared sheet status in the background.
+     */
+    setTimeout(() => {
+      refreshStatusSilently().then(updated => {
+        if (
+          updated &&
+          selectedSection === sectionAtSave &&
+          selectedBay === ""
+        ) {
+          renderBayButtons(sectionAtSave);
+        }
+      });
+    }, 1800);
+
   } catch (error) {
-    console.error("Save failed:", error);
+    console.error(
+      "Submission failed:",
+      error
+    );
 
     message.innerHTML =
-      "Save failed. Check the internet connection.";
+      "Submission failed.";
 
     setSavingState(false);
   }
@@ -588,42 +751,72 @@ async function saveCounts() {
    SAVE EMPTY BAY
 -------------------------------------------------- */
 
-async function saveEmptyBay() {
-  const sectionAtSave = selectedSection;
-  const bayAtSave = selectedBay;
-  const key = sectionAtSave + "|" + bayAtSave;
+function saveEmptyBay() {
+  const sectionAtSave =
+    selectedSection;
 
-  const message = document.getElementById("message");
+  const bayAtSave =
+    selectedBay;
 
-  message.innerHTML = "Saving...";
+  const key =
+    sectionAtSave + "|" + bayAtSave;
+
+  const message =
+    document.getElementById("message");
+
+  const notes =
+    document.getElementById("notes");
+
+  if (!message) {
+    return;
+  }
+
+  message.innerHTML = "Sending...";
   setSavingState(true);
 
   try {
-    await postToGoogle({
+    postToGoogle({
       scout: "Raissa",
       section: sectionAtSave,
       bay: bayAtSave,
       status: "Empty",
       notes:
-        document.getElementById("notes").value ||
-        "No plants"
+        notes && notes.value
+          ? notes.value
+          : "No plants"
     });
 
     weekStatus[key] = "Empty";
     saveStatusCache();
 
-    message.innerHTML = "Empty bay saved";
+    message.innerHTML =
+      "Empty bay submitted";
 
-    await wait(700);
-    await refreshStatusSilently();
+    setTimeout(() => {
+      selectedBay = "";
+      renderBayButtons(sectionAtSave);
+    }, 250);
 
-    selectedBay = "";
-    renderBayButtons(sectionAtSave);
+    setTimeout(() => {
+      refreshStatusSilently().then(updated => {
+        if (
+          updated &&
+          selectedSection === sectionAtSave &&
+          selectedBay === ""
+        ) {
+          renderBayButtons(sectionAtSave);
+        }
+      });
+    }, 1800);
+
   } catch (error) {
-    console.error("Empty bay save failed:", error);
+    console.error(
+      "Empty bay submission failed:",
+      error
+    );
 
     message.innerHTML =
-      "Save failed. Check the internet connection.";
+      "Submission failed.";
 
     setSavingState(false);
   }
@@ -634,7 +827,8 @@ async function saveEmptyBay() {
 -------------------------------------------------- */
 
 function testSave() {
-  const formData = new URLSearchParams();
+  const formData =
+    new URLSearchParams();
 
   formData.append("scout", "Raissa");
   formData.append("section", "S1");
@@ -644,13 +838,17 @@ function testSave() {
   formData.append("aphids", "1");
   formData.append("whiteflies", "0");
   formData.append("fungusGnats", "2");
-  formData.append("notes", "GitHub test save");
+  formData.append(
+    "notes",
+    "GitHub test save"
+  );
 
   fetch(API_URL, {
     method: "POST",
     mode: "no-cors",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
+      "Content-Type":
+        "application/x-www-form-urlencoded"
     },
     body: formData.toString()
   })
@@ -658,7 +856,11 @@ function testSave() {
       alert("Test sent");
     })
     .catch(error => {
-      console.error("Test save failed:", error);
+      console.error(
+        "Test save failed:",
+        error
+      );
+
       alert("Test failed");
     });
 }
