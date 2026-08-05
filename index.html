@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=203">
+  <link rel="stylesheet" href="css/style.css?v=204">
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
@@ -105,13 +105,20 @@ function initializeApp() {
     selectScout();
   }
 
-  // One request supplies week, bay status, counts, notes and scout information.
+  /*
+   * getStatus is the reliable source for the week and bay colors.
+   * getCurrentWeekEntries loads saved counts and notes for fast editing.
+   */
   setTimeout(() => {
+    loadStatus();
     loadCurrentWeekEntries(true);
   }, 50);
 
-  // Refresh data from other scouts every 30 seconds.
+  /*
+   * Keep both users synchronized without blocking the interface.
+   */
   setInterval(() => {
+    loadStatus();
     loadCurrentWeekEntries(true);
   }, 30000);
 }
@@ -247,11 +254,21 @@ async function loadCurrentWeekEntries(force = false) {
       12000
     );
 
-    if (!data || !data.success) {
+    if (
+      !data ||
+      !data.success ||
+      typeof data.entries !== "object" ||
+      data.entries === null
+    ) {
+      console.warn(
+        "getCurrentWeekEntries is not available in the deployed Apps Script yet.",
+        data
+      );
+
       return false;
     }
 
-    currentWeekEntries = data.entries || {};
+    currentWeekEntries = data.entries;
     entriesAreLoaded = true;
 
     /*
@@ -265,12 +282,12 @@ async function loadCurrentWeekEntries(force = false) {
         currentWeekEntries[key].status;
     });
 
-    currentWeek = data.week || "";
+    if (data.week) {
+      currentWeek = data.week;
 
-    document.getElementById("weekDisplay").innerHTML =
-      currentWeek
-        ? "Week " + currentWeek
-        : "";
+      document.getElementById("weekDisplay").innerHTML =
+        "Week " + currentWeek;
+    }
 
     if (selectedSection && !selectedBay) {
       renderBayScreen(selectedSection);
@@ -802,6 +819,7 @@ function saveCounts() {
     }, 250);
 
     setTimeout(() => {
+      loadStatus();
       loadCurrentWeekEntries(true);
     }, 1800);
   } catch (error) {
@@ -858,6 +876,7 @@ function saveEmptyBay() {
     }, 250);
 
     setTimeout(() => {
+      loadStatus();
       loadCurrentWeekEntries(true);
     }, 1800);
   } catch (error) {
