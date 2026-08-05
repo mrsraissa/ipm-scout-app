@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#065f46">
 
   <title>IPM Scout</title>
-  <link rel="stylesheet" href="css/style.css?v=201">
+  <link rel="stylesheet" href="css/style.css?v=202">
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 
@@ -83,6 +83,14 @@ let weekStatus = {};
 let currentWeek = "";
 let currentScout = localStorage.getItem("currentScout") || "";
 
+/*
+ * Current-week entry cache.
+ * Completed bays can open from this cache instead of requesting Google every time.
+ */
+let currentWeekEntries = {};
+let entriesAreLoaded = false;
+let entriesAreLoading = false;
+
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeApp);
 } else {
@@ -97,7 +105,13 @@ function initializeApp() {
     selectScout();
   }
 
-  setTimeout(loadStatus, 50);
+  /*
+   * Show the page first, then load shared data in the background.
+   */
+  setTimeout(() => {
+    loadStatus();
+    loadCurrentWeekEntries();
+  }, 50);
 }
 
 /* ---------- LOAD DATA ---------- */
@@ -160,34 +174,148 @@ function loadStatus() {
   document.body.appendChild(script);
 }
 
-function loadDashboard() {
-  const callbackName = "dashboardCallback_" + Date.now();
+function requestJsonp(action, params = {}, timeoutMs = 12000) {
+  return new Promise((resolve, reject) => {
+    const callbackName =
+      action.replace(/[^a-zA-Z0-9]/g, "") +
+      "Callback_" +
+      Date.now() +
+      "_" +
+      Math.random().toString(36).slice(2);
 
-  window[callbackName] = function(data) {
-    renderDashboard(data);
+    const script = document.createElement("script");
 
-    delete window[callbackName];
-    script.remove();
-  };
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error(action + " request timed out."));
+    }, timeoutMs);
 
-  const script = document.createElement("script");
-  script.src = API_URL + "?action=getDashboard&callback=" + callbackName;
-  document.body.appendChild(script);
+    function cleanup() {
+      clearTimeout(timeout);
+
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = undefined;
+      }
+    }
+
+    window[callbackName] = function(data) {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = function() {
+      cleanup();
+      reject(new Error("Could not connect to Apps Script."));
+    };
+
+    const query = new URLSearchParams();
+    query.append("action", action);
+    query.append("callback", callbackName);
+    query.append("_", Date.now());
+
+    Object.keys(params).forEach(key => {
+      query.append(key, params[key]);
+    });
+
+    script.src = API_URL + "?" + query.toString();
+    document.body.appendChild(script);
+  });
 }
 
-function loadHeatMaps() {
-  const callbackName = "heatMapCallback_" + Date.now();
+async function loadCurrentWeekEntries(force = false) {
+  if (entriesAreLoading) {
+    return false;
+  }
 
-  window[callbackName] = function(data) {
+  if (entriesAreLoaded && !force) {
+    return true;
+  }
+
+  entriesAreLoading = true;
+
+  try {
+    const data = await requestJsonp("getCurrentWeekEntries", {}, 12000);
+
+    if (data && data.success) {
+      currentWeekEntries = data.entries || {};
+      entriesAreLoaded = true;
+
+      if (data.week) {
+        currentWeek = data.week;
+        document.getElementById("weekDisplay").innerHTML =
+          "Week " + currentWeek;
+      }
+
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.warn("Could not load current-week entries:", error);
+    return false;
+  } finally {
+    entriesAreLoading = false;
+  }
+}
+
+async function loadDashboard() {
+  const page = document.getElementById("dashboardPage");
+
+  page.innerHTML = `
+    <h2>Dashboard</h2>
+    <div class="dashboard-card" style="text-align:center;font-weight:700;color:#64748b;">
+      Loading dashboard...
+    </div>
+  `;
+
+  try {
+    const data = await requestJsonp("getDashboard", {}, 15000);
+    renderDashboard(data);
+  } catch (error) {
+    console.error("Dashboard load failed:", error);
+
+    page.innerHTML = `
+      <h2>Dashboard</h2>
+      <div class="dashboard-card" style="text-align:center;color:#dc2626;font-weight:700;">
+        Could not load dashboard data.
+        <br><br>
+        <button class="download-btn" onclick="loadDashboard()">Try Again</button>
+      </div>
+    `;
+  }
+}
+
+async function loadHeatMaps() {
+  const page = document.getElementById("heatmapsPage");
+
+  page.innerHTML = `
+    <h2>Heat Maps</h2>
+    <div class="dashboard-card" style="text-align:center;font-weight:700;color:#64748b;">
+      Loading heat maps...
+    </div>
+  `;
+
+  try {
+    const data = await requestJsonp("getHeatMaps", {}, 15000);
     renderHeatMaps(data);
+  } catch (error) {
+    console.error("Heat map load failed:", error);
 
-    delete window[callbackName];
-    script.remove();
-  };
-
-  const script = document.createElement("script");
-  script.src = API_URL + "?action=getHeatMaps&callback=" + callbackName;
-  document.body.appendChild(script);
+    page.innerHTML = `
+      <h2>Heat Maps</h2>
+      <div class="dashboard-card" style="text-align:center;color:#dc2626;font-weight:700;">
+        Could not load heat map data.
+        <br><br>
+        <button class="download-btn" onclick="loadHeatMaps()">Try Again</button>
+      </div>
+    `;
+  }
 }
 
 /* ---------- PAGE NAVIGATION ---------- */
@@ -434,10 +562,22 @@ async function handleBayClick(bay) {
   }
 
   const answer = confirm(
-    "This bay was already entered this week.\n\nDo you want to modify it?"
+    "This bay was already entered this week.
+
+Do you want to modify it?"
   );
 
   if (!answer) return;
+
+  /*
+   * Open immediately from the current-week cache when available.
+   */
+  const cachedEntry = currentWeekEntries[key];
+
+  if (cachedEntry) {
+    showEntry(bay, cachedEntry);
+    return;
+  }
 
   selectedBay = bay;
   updateBottomBar("entry");
@@ -450,18 +590,47 @@ async function handleBayClick(bay) {
   `;
 
   try {
+    /*
+     * First try to finish loading the whole current-week cache.
+     */
+    await loadCurrentWeekEntries();
+
+    if (
+      selectedSection !== sectionAtOpen ||
+      selectedBay !== bay
+    ) {
+      return;
+    }
+
+    if (currentWeekEntries[key]) {
+      showEntry(bay, currentWeekEntries[key]);
+      return;
+    }
+
+    /*
+     * Fallback for an entry that was not yet in the shared cache.
+     */
     const entryData = await getEntryData(sectionAtOpen, bay);
 
-    if (selectedSection !== sectionAtOpen || selectedBay !== bay) return;
+    if (
+      selectedSection !== sectionAtOpen ||
+      selectedBay !== bay
+    ) {
+      return;
+    }
 
+    currentWeekEntries[key] = entryData;
     showEntry(bay, entryData);
+
   } catch (error) {
     console.error("Could not load saved entry:", error);
 
     document.getElementById("bayContainer").innerHTML = `
       <div class="dashboard-card" style="text-align:center;padding:24px;color:#dc2626;font-weight:700;">
         Could not load the saved entry.<br><br>
-        <button class="btn" onclick="showBays('${sectionAtOpen}')">Return to Bays</button>
+        <button class="btn" onclick="showBays('${sectionAtOpen}')">
+          Return to Bays
+        </button>
       </div>
     `;
   }
@@ -566,6 +735,21 @@ function saveCounts() {
 
     weekStatus[key] = "Scouted";
 
+    currentWeekEntries[key] = {
+      section: sectionAtSave,
+      bay: bayAtSave,
+      status: "Scouted",
+      counts: {
+        "Thrips": Number(values["Thrips"] || 0),
+        "Aphids": Number(values["Aphids"] || 0),
+        "Whiteflies": Number(values["Whiteflies"] || 0),
+        "Fungus Gnats": Number(values["Fungus Gnats"] || 0)
+      },
+      notes: notes ? notes.value : "",
+      lastUpdated: new Date().toISOString(),
+      lastScout: currentScout
+    };
+
     message.innerHTML = "✓ Submitted";
     message.className = "message success-message";
 
@@ -574,7 +758,10 @@ function saveCounts() {
       showBays(sectionAtSave, false);
     }, 250);
 
-    setTimeout(loadStatus, 1800);
+    setTimeout(() => {
+      loadStatus();
+      loadCurrentWeekEntries(true);
+    }, 1800);
   } catch (error) {
     console.error("Submission failed:", error);
     message.innerHTML = "Submission failed. Please check your connection.";
@@ -605,6 +792,21 @@ function saveEmptyBay() {
 
     weekStatus[key] = "Empty";
 
+    currentWeekEntries[key] = {
+      section: sectionAtSave,
+      bay: bayAtSave,
+      status: "Empty",
+      counts: {
+        "Thrips": "",
+        "Aphids": "",
+        "Whiteflies": "",
+        "Fungus Gnats": ""
+      },
+      notes: notes && notes.value ? notes.value : "No plants",
+      lastUpdated: new Date().toISOString(),
+      lastScout: currentScout
+    };
+
     message.innerHTML = "✓ Empty bay submitted";
     message.className = "message success-message";
 
@@ -613,7 +815,10 @@ function saveEmptyBay() {
       showBays(sectionAtSave, false);
     }, 250);
 
-    setTimeout(loadStatus, 1800);
+    setTimeout(() => {
+      loadStatus();
+      loadCurrentWeekEntries(true);
+    }, 1800);
   } catch (error) {
     console.error("Empty bay submission failed:", error);
     message.innerHTML = "Submission failed. Please check your connection.";
@@ -980,6 +1185,7 @@ function renderHeatMaps(data) {
 
   html += renderSummaryHotspots("Thrips Hotspots", 15, thripsHotspots);
   html += renderSummaryHotspots("Aphids Hotspots", 5, aphidsHotspots);
+  html += renderSummaryHotspots("Whiteflies Hotspots", 5, whitefliesHotspots);
 
   html += `
    <div id="heatMapExport"
@@ -1067,27 +1273,29 @@ function renderReportsPage() {
   `;
 }
 
-  function loadGrowersReport() {
+  async function loadGrowersReport() {
+  const preview = document.getElementById("growersReportPreview");
 
-  const callbackName = "growersReportCallback_" + Date.now();
+  preview.innerHTML = `
+    <div class="dashboard-card" style="text-align:center;font-weight:700;color:#64748b;">
+      Generating report...
+    </div>
+  `;
 
-  window[callbackName] = function(data) {
-
+  try {
+    const data = await requestJsonp("getHeatMaps", {}, 15000);
     renderGrowersReport(data);
+  } catch (error) {
+    console.error("Growers report load failed:", error);
 
-    delete window[callbackName];
-    script.remove();
-
-  };
-
-  const script = document.createElement("script");
-
-  script.src =
-    API_URL +
-    "?action=getHeatMaps&callback=" +
-    callbackName;
-
-  document.body.appendChild(script);
+    preview.innerHTML = `
+      <div class="dashboard-card" style="text-align:center;color:#dc2626;font-weight:700;">
+        Could not generate the report.
+        <br><br>
+        <button class="download-btn" onclick="loadGrowersReport()">Try Again</button>
+      </div>
+    `;
+  }
 }
 
   function renderGrowersReport(data) {
@@ -1251,32 +1459,112 @@ function getFungusInsight(fungusData) {
 
   return `Highest pressure in ${items.slice(0, 3).map(x => x.section).join(", ")}.`;
 }
-function downloadGrowersReport() {
-  const element = document.getElementById("growersReportExport");
+async function waitForExportImages(element) {
+  const images = Array.from(element.querySelectorAll("img"));
 
-  html2canvas(element, {
-    backgroundColor: "#ffffff",
-    scale: 4,
-    useCORS: true,
-    allowTaint: true
-  }).then(canvas => {
-        const link = document.createElement("a");
-    link.download = "Growers_Weekly_Report.png";
+  await Promise.all(
+    images.map(image => {
+      if (image.complete) {
+        return Promise.resolve();
+      }
+
+      return new Promise(resolve => {
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener("error", resolve, { once: true });
+      });
+    })
+  );
+}
+
+async function downloadElementAsPng(elementId, fileName, backgroundColor = "#ffffff") {
+  const element = document.getElementById(elementId);
+
+  if (!element) {
+    alert("The export figure is not ready yet.");
+    return;
+  }
+
+  if (typeof html2canvas !== "function") {
+    alert("The download library is still loading. Please try again in a moment.");
+    return;
+  }
+
+  const originalStyles = {
+    position: element.style.position,
+    left: element.style.left,
+    top: element.style.top,
+    zIndex: element.style.zIndex,
+    display: element.style.display,
+    visibility: element.style.visibility,
+    overflow: element.style.overflow
+  };
+
+  try {
+    /*
+     * Move hidden export content into the renderable viewport
+     * without displaying it above the app.
+     */
+    element.style.position = "fixed";
+    element.style.left = "0";
+    element.style.top = "0";
+    element.style.zIndex = "-9999";
+    element.style.display = "block";
+    element.style.visibility = "visible";
+    element.style.overflow = "visible";
+
+    await waitForExportImages(element);
+
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    const canvas = await html2canvas(element, {
+      backgroundColor: backgroundColor,
+      scale: 4,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      width: element.scrollWidth,
+      height: element.scrollHeight,
+      windowWidth: Math.max(document.documentElement.clientWidth, element.scrollWidth),
+      windowHeight: Math.max(document.documentElement.clientHeight, element.scrollHeight)
+    });
+
+    const link = document.createElement("a");
+    link.download = fileName;
     link.href = canvas.toDataURL("image/png");
     link.click();
 
-  });
+  } catch (error) {
+    console.error("PNG download failed:", error);
+    alert("The figure could not be downloaded. Please try again.");
+  } finally {
+    element.style.position = originalStyles.position;
+    element.style.left = originalStyles.left;
+    element.style.top = originalStyles.top;
+    element.style.zIndex = originalStyles.zIndex;
+    element.style.display = originalStyles.display;
+    element.style.visibility = originalStyles.visibility;
+    element.style.overflow = originalStyles.overflow;
+  }
 }
 
-  
-function downloadHeatMap() {
-  const element = document.getElementById("heatMapExport");
+function downloadGrowersReport() {
+  return downloadElementAsPng(
+    "growersReportExport",
+    "Growers_Weekly_Report.png",
+    "#ffffff"
+  );
+}
 
- html2canvas(element, {
-  backgroundColor: "#ffffff",
-  scale: 4,
-  useCORS: true,
-  allowTaint: true
+function downloadHeatMap() {
+  return downloadElementAsPng(
+    "heatMapExport",
+    "IPM_Heat_Map.png",
+    "#ffffff"
+  );
 }).then(canvas => {
     const link = document.createElement("a");
     link.download = "IPM_Heat_Map.png";
